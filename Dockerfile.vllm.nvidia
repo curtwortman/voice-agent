@@ -1,0 +1,4 @@
+FROM vllm/vllm-openai:v0.20.0
+
+# The command is provided in docker-compose.nvidia.yml, but we set a default here
+CMD ["python3", "-m", "vllm.entrypoints.omni.api_server", "--model", "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice", "--engine-use-ray", "--pipeline-parallel-size", "1", "--host", "0.0.0.0", "--port", "8001"]

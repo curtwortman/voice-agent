@@ -1,0 +1,58 @@
+services:
+  vllm-omni:
+    build:
+      context: .
+      dockerfile: Dockerfile.vllm.rocm
+    image: custom/vllm-omni-rocm:latest
+    container_name: vllm-omni-rocm
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    group_add:
+      - video
+      - render
+    shm_size: '16gb'
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_PTRACE
+    ipc: host
+    network_mode: host
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - ./miopen:/root/miopen
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
+      - VLLM_USE_ROCM=1
+      - MIOPEN_USER_DB_PATH=/root/miopen
+      - MIOPEN_FIND_MODE=FAST
+      - VLLM_ROCM_USE_AITER=1
+      - HSA_OVERRIDE_GFX_VERSION=${HSA_OVERRIDE_GFX_VERSION:-11.0.0}
+      - HSE_AMDGPU_TARGET=gfx1100
+      - HIP_VISIBLE_DEVICES=${HIP_VISIBLE_DEVICES:-0}
+    command: >
+      python -m vllm.entrypoints.omni.api_server 
+      --model Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice 
+      --engine-use-ray 
+      --pipeline-parallel-size 1 
+      --host 0.0.0.0 
+      --port 8001
+
+  api-gateway:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.api
+    container_name: voice-api-rocm
+    network_mode: host
+    volumes:
+      - ./backend:/app
+      - ./frontend/dist:/app/static
+      - ./obsidian_vault:/app/vault
+      - ./voice_library:/app/voice_library
+    environment:
+      - VLLM_API_URL=http://localhost:8001/v1
+      - LLM_API_BASE=${LLM_API_BASE:-http://localhost:11434/v1}
+      - LLM_API_KEY=${LLM_API_KEY:-ollama}
+      - LLM_MODEL=${LLM_MODEL:-llama3}
+    # STT Faster-Whisper will fall back to CPU on ROCm if CTranslate2 isn't built for it
+    command: uvicorn server:app --host ${API_HOST:-0.0.0.0} --port ${API_PORT:-8000} --reload

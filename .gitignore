@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+.*-venv/
+vllm-omni/
+
+# Node
+node_modules/
+dist/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Binary artifacts
+*.mp3
+*.wav
+*.webm
+
+# ROCm
+miopen/
+
+# Obsidian vault (managed externally)
+obsidian_vault/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+faster-whisper
+websockets
+python-multipart
+pytest
+httpx
+ffmpeg-python
+numpy

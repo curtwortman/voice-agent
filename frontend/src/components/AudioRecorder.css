@@ -1,0 +1,52 @@
+.audio-recorder-container {
+  padding: 1rem;
+}
+
+.controls {
+  margin-bottom: 1rem;
+}
+
+.record-button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  font-weight: bold;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.record-button.start {
+  background-color: #3b82f6; /* blue-500 */
+}
+
+.record-button.start:hover {
+  background-color: #2563eb; /* blue-600 */
+}
+
+.record-button.stop {
+  background-color: #ef4444; /* red-500 */
+}
+
+.record-button.stop:hover {
+  background-color: #dc2626; /* red-600 */
+}
+
+.transcription-box {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  background-color: #f9fafb;
+  min-height: 200px;
+}
+
+.transcription-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.transcription-text {
+  white-space: pre-wrap;
+}

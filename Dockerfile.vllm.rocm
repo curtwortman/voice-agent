@@ -1,0 +1,16 @@
+FROM vllm/vllm-openai-rocm:v0.20.0
+
+# Ensure miopen cache directory exists in the container
+RUN mkdir -p /root/miopen
+
+# Set environment variables for ROCm compatibility
+ENV VLLM_USE_ROCM=1
+ENV MIOPEN_USER_DB_PATH=/root/miopen
+ENV FLASH_ATTENTION_TRITON_AMD_ENABLE=1
+ENV GPU_MAX_HW_QUEUES=1
+ENV GPU_KEEPALIVE_INTERVAL=15
+ENV MIOPEN_FIND_MODE=FAST
+ENV VLLM_ROCM_USE_AITER=1
+
+# The command is provided in docker-compose.yml, but we can set a default here
+CMD ["python", "-m", "vllm.entrypoints.omni.api_server", "--model", "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice", "--engine-use-ray", "--pipeline-parallel-size", "1", "--host", "0.0.0.0", "--port", "8001"]
