@@ -8,16 +8,23 @@ Drawing heavy inspiration from industry-leading developer tools (like the Deepgr
 
 ## 2. Global Layout Architecture
 
-The application defaults to the **Minimized View**, which acts as a focused, centralized control panel.
+The application provides a dual-view system to cater to both casual users and developers.
 
-*   **The Centered Modal:** The core interface is housed within a large, centered modal container (approximately 1000px wide). This creates a focused workspace, blurring out peripheral distractions.
+*   **The Centered Modal (Default):** The core interface is housed within a large, centered modal container (max-w-5xl). This creates a focused workspace with a polished, glassmorphism-inspired aesthetic, blurring out peripheral distractions.
 *   **Two-Pane System:** Across almost all views, the modal utilizes a strict two-pane grid layout. The Left Pane is consistently dedicated to **Input & Control** (speaking, uploading, selecting features), while the Right Pane is dedicated to **Output & Results** (transcripts, summaries, generated audio).
 *   **Global Navigation:** The top of the modal houses four primary navigation tabs that persist across the experience:
     1.  Speech to Text
     2.  Text to Speech
     3.  Voice Agent
     4.  Audio Intelligence
-*   **Expandability:** A toggle (usually placed in the header) allows users to break out of the Minimized View into a full-screen, 3-column IDE-style layout for deeper API inspection (viewing JSON payloads, etc.).
+*   **Expandability (Full Playground):** A toggle allows users to break out of the Minimized View into a full-screen, 3-column IDE-style layout for deeper API inspection. 
+
+### 2.1 View Enhancements & Tailwind CSS Leverage
+To improve both the default and full page views, the following aspects are leveraged via Tailwind CSS:
+*   **Responsive Breakpoints:** Utilizing Tailwind's responsive prefixes (`md:`, `lg:`) to ensure the two-pane modal cleanly collapses into a single-column layout on mobile, while the Full Playground utilizes CSS Grid (`grid-cols-1 lg:grid-cols-3`) to maximize desktop screen real estate.
+*   **Fluid Transitions:** Applying classes like `transition-all duration-300 ease-in-out` when switching between the Minimized Modal and Full Playground views to avoid jarring layout shifts.
+*   **Micro-Animations:** Adding `hover:scale-105` or subtle glowing effects (`shadow-[0_0_15px_#13ef95]`) to interactive elements like the Voice Agent orb and Speak buttons to make the interface feel alive.
+*   **Design Tokens:** Centralizing the `#13ef95` neon green and `#0d0d0d` background into Tailwind configuration (`theme.colors`) for strict visual consistency.
 
 ## 3. Color System and Typography
 

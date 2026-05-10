@@ -13,6 +13,8 @@ export const useAudioAnalyzer = (settings: Settings) => {
   const [isRecordingPlaying, setIsRecordingPlaying] = useState(false);
   const [transcription, setTranscription] = useState("");
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isAgentConnected, setIsAgentConnected] = useState(false);
+  const [agentMessages, setAgentMessages] = useState<{role: string, content: string}[]>([]);
 
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -22,6 +24,7 @@ export const useAudioAnalyzer = (settings: Settings) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const socketRef = useRef<WebSocket | null>(null);
+  const agentSocketRef = useRef<WebSocket | null>(null);
   const recordingStartTimeRef = useRef<number | null>(null);
 
   // Output refs
@@ -78,6 +81,67 @@ export const useAudioAnalyzer = (settings: Settings) => {
     };
   }, [settings.transcriptionEnabled, settings.saveFolder, settings.filenamePrefix, settings.audioOutput]);
 
+  const connectAgentWebSocket = useCallback(() => {
+    if (agentSocketRef.current?.readyState === WebSocket.OPEN) return;
+
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const apiBase = import.meta.env.VITE_API_BASE || `${window.location.host}`;
+    const wsUrl = `${wsProtocol}//${apiBase}/ws/agent`;
+    
+    const socket = new WebSocket(wsUrl);
+    agentSocketRef.current = socket;
+
+    socket.onopen = () => {
+      console.log('Agent WebSocket Connected');
+      setIsAgentConnected(true);
+      setAgentMessages([]);
+    };
+
+    socket.onmessage = async (event) => {
+      if (typeof event.data === 'string') {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.role && msg.content) {
+             setAgentMessages(prev => [...prev, { role: msg.role, content: msg.content }]);
+          }
+        } catch (e) {
+           console.log("Received string message from agent:", event.data);
+        }
+      } else if (event.data instanceof Blob) {
+        // Handle incoming audio from agent
+        try {
+          const ctx = initAudioContext();
+          const arrayBuffer = await event.data.arrayBuffer();
+          const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+          const source = ctx.createBufferSource();
+          source.buffer = audioBuffer;
+          
+          if (!outputAnalyserRef.current) {
+            outputAnalyserRef.current = ctx.createAnalyser();
+            outputAnalyserRef.current.fftSize = 2048;
+          }
+          
+          source.connect(outputAnalyserRef.current);
+          outputAnalyserRef.current.connect(ctx.destination);
+          source.start();
+        } catch (e) {
+          console.error("Error playing agent audio", e);
+        }
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.error('Agent WebSocket Error:', error);
+      setIsAgentConnected(false);
+    };
+
+    socket.onclose = () => {
+      console.log('Agent WebSocket Disconnected');
+      setIsAgentConnected(false);
+      stopAudio(); // Stop mic when agent disconnects
+    };
+  }, []);
+
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
@@ -107,9 +171,13 @@ export const useAudioAnalyzer = (settings: Settings) => {
              chunksRef.current.push(e.data);
           }
 
-          // Send to WebSocket if open (Continuous or Recording)
+          // Send to transcription socket
           if (socketRef.current?.readyState === WebSocket.OPEN) {
             socketRef.current.send(e.data);
+          }
+          // Send to agent socket
+          if (agentSocketRef.current?.readyState === WebSocket.OPEN) {
+            agentSocketRef.current.send(e.data);
           }
         }
       };
@@ -160,6 +228,9 @@ export const useAudioAnalyzer = (settings: Settings) => {
               if (socketRef.current?.readyState === WebSocket.OPEN) {
                 socketRef.current.send(e.data);
               }
+              if (agentSocketRef.current?.readyState === WebSocket.OPEN) {
+                agentSocketRef.current.send(e.data);
+              }
             }
           };
       }
@@ -180,6 +251,10 @@ export const useAudioAnalyzer = (settings: Settings) => {
     if (socketRef.current) {
       socketRef.current.close();
       socketRef.current = null;
+    }
+    if (agentSocketRef.current) {
+      agentSocketRef.current.close();
+      agentSocketRef.current = null;
     }
 
     setIsMicOn(false);
@@ -253,6 +328,21 @@ export const useAudioAnalyzer = (settings: Settings) => {
       recordingStartTimeRef.current = Date.now();
     }
   }, [isMicOn, isRecording, connectWebSocket, settings.transcriptionMode, settings.transcriptionEnabled]);
+
+  const toggleAgent = useCallback(() => {
+    if (isAgentConnected) {
+      // Disconnect
+      if (agentSocketRef.current) {
+        agentSocketRef.current.close();
+      }
+    } else {
+      // Connect and start mic
+      connectAgentWebSocket();
+      if (!isMicOn) {
+        startAudio();
+      }
+    }
+  }, [isAgentConnected, connectAgentWebSocket, isMicOn, startAudio]);
 
   // Max Duration Check
   useEffect(() => {
@@ -381,6 +471,9 @@ export const useAudioAnalyzer = (settings: Settings) => {
     toggleRecording,
     togglePlayback,
     getAudioData,
-    getOutputAudioData
+    getOutputAudioData,
+    isAgentConnected,
+    toggleAgent,
+    agentMessages
   };
 };

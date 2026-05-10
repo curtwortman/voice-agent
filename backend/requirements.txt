@@ -7,3 +7,6 @@ pytest
 httpx
 ffmpeg-python
 numpy
+pipecat-ai
+pipecat-ai[silero]
+pipecat-ai[openai]

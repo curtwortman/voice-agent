@@ -44,7 +44,38 @@ function App() {
     transcriptionMode: 'recording'
   });
 
-  const { isMicOn, transcription, toggleMic, getAudioData } = useAudioAnalyzer(settings);
+  const { isMicOn, transcription, toggleMic, getAudioData, isAgentConnected, toggleAgent, agentMessages } = useAudioAnalyzer(settings);
+
+  const [ttsText, setTtsText] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateTTS = async () => {
+    if (!ttsText) return;
+    setIsGenerating(true);
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE || `${window.location.host}`;
+      const response = await fetch(`${window.location.protocol}//${apiBase}/v1/audio/speech`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input: ttsText,
+          model: "tts-1",
+          voice: "default",
+          response_format: "mp3"
+        })
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.play();
+      }
+    } catch(e) {
+      console.error(e);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const getRequestJson = () => JSON.stringify({ model: "nova-3", language: "en", smart_format: true }, null, 2);
 
@@ -58,27 +89,33 @@ function App() {
       />
 
       {!isMaximized ? (
-        /* --- MINIMIZED MODAL VIEW (DEFAULT) --- */
-        <div className="minimized-modal">
-          <div className="modal-header">
-            <div className="compact-tabs" style={{ margin: 0, padding: 0 }}>
-               <button className={`compact-tab ${view === 'stt' ? 'active' : ''}`} onClick={() => setView('stt')}>
-                  <Zap size={16} /> Speech to Text
-               </button>
-               <button className={`compact-tab ${view === 'tts' ? 'active' : ''}`} onClick={() => setView('tts')}>
-                  <Volume2 size={16} /> Text to Speech
-               </button>
-               <button className={`compact-tab ${view === 'agent' ? 'active' : ''}`} onClick={() => setView('agent')}>
-                  <Bot size={16} /> Voice Agent
-               </button>
-               <button className={`compact-tab ${view === 'intelligence' ? 'active' : ''}`} onClick={() => setView('intelligence')}>
-                  <Brain size={16} /> Audio Intelligence
-               </button>
-            </div>
-            <button className="maximize-btn" onClick={() => setIsMaximized(true)}>
-               <Maximize2 size={14} /> Full Playground
-            </button>
-          </div>
+        /* --- SLIDEBOX VIEW (DEFAULT) --- */
+        <div className="mx-auto max-w-5xl px-4 w-full mt-12 mb-12">
+          <div className="relative rounded-xl border border-gray-800 p-6 bg-[#0d0d0d] shadow-[0_40px_100px_rgba(0,0,0,0.8)]">
+            <div className="pointer-events-none absolute inset-0 z-0 rounded-xl p-px bg-gradient-to-br from-white/10 to-transparent" style={{ WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }}></div>
+            
+            <div className="relative z-10">
+              <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                <div className="-mx-0.5 -my-1 w-full overflow-x-auto px-0.5 py-1 hide-scrollbar">
+                  <div className="flex min-w-max gap-6" role="tablist">
+                    <button role="tab" className={`flex items-center gap-2 pb-2 border-b-2 transition-colors ${view === 'stt' ? 'border-[#13ef95] text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`} onClick={() => setView('stt')}>
+                      <Zap size={18} className={view === 'stt' ? 'text-[#13ef95]' : ''} /> Speech to Text
+                    </button>
+                    <button role="tab" className={`flex items-center gap-2 pb-2 border-b-2 transition-colors ${view === 'tts' ? 'border-[#13ef95] text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`} onClick={() => setView('tts')}>
+                      <Volume2 size={18} className={view === 'tts' ? 'text-[#13ef95]' : ''} /> Text to Speech
+                    </button>
+                    <button role="tab" className={`flex items-center gap-2 pb-2 border-b-2 transition-colors ${view === 'agent' ? 'border-[#13ef95] text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`} onClick={() => setView('agent')}>
+                      <Bot size={18} className={view === 'agent' ? 'text-[#13ef95]' : ''} /> Voice Agent
+                    </button>
+                    <button role="tab" className={`flex items-center gap-2 pb-2 border-b-2 transition-colors ${view === 'intelligence' ? 'border-[#13ef95] text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`} onClick={() => setView('intelligence')}>
+                      <Brain size={18} className={view === 'intelligence' ? 'text-[#13ef95]' : ''} /> Audio Intelligence
+                    </button>
+                  </div>
+                </div>
+                <button className="flex items-center gap-2 bg-[#1a1a1a] border border-white/10 px-4 py-2 rounded-lg text-gray-500 text-sm hover:text-white hover:border-white transition-colors ml-4 whitespace-nowrap" onClick={() => setIsMaximized(true)}>
+                  <Maximize2 size={14} /> Full Playground
+                </button>
+              </div>
 
           {view === 'stt' && (
             <>
@@ -138,11 +175,14 @@ function App() {
 
           {view === 'tts' && (
               <div className="compact-layout" style={{ gridTemplateColumns: '1.2fr 1fr' }}>
-                  <div className="text-area-container">
-                      <div className="text-area-content" style={{ color: 'var(--text-secondary)' }}>
-                        Ready to hear it in action? Type or paste any text here to try it out.
-                      </div>
-                      <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem', marginTop: 'auto' }}>70 / 1,000</div>
+                  <div className="text-area-container flex flex-col">
+                      <textarea 
+                        className="w-full h-full bg-transparent border-none outline-none text-white resize-none" 
+                        placeholder="Ready to hear it in action? Type or paste any text here to try it out."
+                        value={ttsText}
+                        onChange={(e) => setTtsText(e.target.value)}
+                      />
+                      <div className="text-xs text-gray-500 mt-auto">{ttsText.length} / 1,000</div>
                   </div>
                   <div>
                       <div className="chip-group" style={{ marginBottom: '1.5rem' }}>
@@ -154,8 +194,12 @@ function App() {
                           <div className="voice-item"><div className="avatar-mini" /> <PlayCircle size={14} /> Odysseus</div>
                           <div className="voice-item"><div className="avatar-mini" /> <PlayCircle size={14} /> Harmonia</div>
                       </div>
-                      <button className="btn btn-primary" style={{ width: '100%', marginTop: '2rem', height: '48px', justifyContent: 'center' }}>
-                         <PlayCircle size={18} /> Generate
+                      <button 
+                        className={`btn btn-primary w-full mt-8 h-12 justify-center transition-all duration-300 hover:scale-[1.02] ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        onClick={handleGenerateTTS}
+                        disabled={isGenerating}
+                      >
+                         <PlayCircle size={18} /> {isGenerating ? 'Generating...' : 'Generate'}
                       </button>
                   </div>
               </div>
@@ -193,22 +237,40 @@ function App() {
           {view === 'agent' && (
               <div className="compact-layout" style={{ gridTemplateColumns: '1fr 1.5fr' }}>
                   <div className="speak-container">
-                      <div style={{ width: '220px', height: '220px', borderRadius: '50%', border: '2px solid #13ef95', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', cursor: 'pointer' }}>
-                         <span style={{ color: '#13ef95', fontWeight: 600 }}>Click here to<br/>talk to me</span>
+                      <div 
+                        onClick={toggleAgent}
+                        className={`w-[220px] h-[220px] rounded-full border-2 flex items-center justify-center text-center cursor-pointer transition-all duration-300 hover:scale-105 ${isAgentConnected ? 'border-[#ff33cc] shadow-[0_0_30px_#ff33cc]' : 'border-[#13ef95] shadow-[0_0_15px_#13ef95]'}`}
+                      >
+                         <span className={`font-semibold ${isAgentConnected ? 'text-[#ff33cc]' : 'text-[#13ef95]'}`}>
+                           {isAgentConnected ? 'Agent Listening...' : 'Click here to\ntalk to me'}
+                         </span>
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Built with Deepgram APIs</span>
+                      <span className="text-xs text-gray-500 mt-4">Built with Pipecat & vLLM</span>
                   </div>
                   <div>
                       <div className="chip-group" style={{ marginBottom: '1.5rem' }}>
                          <div className="avatar-mini" /><div className="avatar-mini" /><div className="avatar-mini" />
                       </div>
-                      <div className="text-area-container" style={{ minHeight: '180px' }}>
-                         <p style={{ color: '#fff' }}>Hey there! Ready to see the Voice Agent in action? Just click the orb to get started.</p>
+                      <div className="text-area-container flex-1 overflow-y-auto" style={{ minHeight: '180px' }}>
+                         {agentMessages.length === 0 ? (
+                           <p className="text-gray-400">Hey there! Ready to see the Voice Agent in action? Just click the orb to get started.</p>
+                         ) : (
+                           <div className="space-y-2">
+                             {agentMessages.map((m, idx) => (
+                               <div key={idx} className={`p-2 rounded-md ${m.role === 'user' ? 'bg-[#1a1a1a] text-[#13ef95] ml-4' : 'bg-[#222] text-white mr-4'}`}>
+                                 <span className="font-semibold text-xs opacity-50 block mb-1">{m.role.toUpperCase()}</span>
+                                 <span>{m.content}</span>
+                               </div>
+                             ))}
+                           </div>
+                         )}
                       </div>
                   </div>
               </div>
           )}
+          </div>
         </div>
+      </div>
       ) : (
         /* --- MAXIMIZED PLAYGROUND VIEW --- */
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw' }}>

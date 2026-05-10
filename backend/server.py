@@ -7,6 +7,18 @@ from whisper_service import WhisperService
 from tts_service import TTSService, FORMAT_MEDIA_TYPES, SUPPORTED_FORMATS
 from obsidian_service import ObsidianService
 
+from pipecat.transports.network.fastapi_websocket import FastAPIWebsocketTransport, FastAPIWebsocketParams
+from pipecat.pipeline.pipeline import Pipeline
+from pipecat.pipeline.runner import PipelineRunner
+from pipecat.pipeline.task import PipelineParams, PipelineTask
+from pipecat.vad.silero import SileroVADAnalyzer
+from pipecat.services.openai import OpenAILLMService
+from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+from pipecat.frames.frames import EndFrame, LLMMessagesFrame
+
+from pipecat_services.local_stt import LocalWhisperSTT
+from pipecat_services.local_tts import LocalTTS
+
 import os
 import tempfile
 import asyncio
@@ -268,6 +280,64 @@ async def websocket_endpoint(
 
         if os.path.exists(session_file_path):
             os.remove(session_file_path)
+
+
+@app.websocket("/ws/agent")
+async def agent_websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+
+    transport = FastAPIWebsocketTransport(
+        websocket=websocket,
+        params=FastAPIWebsocketParams(
+            audio_out_enabled=True,
+            audio_in_enabled=True,
+            add_wav_header=False,
+            vad_enabled=True,
+            vad_analyzer=SileroVADAnalyzer(),
+            vad_audio_passthrough=True
+        )
+    )
+
+    llm = OpenAILLMService(
+        api_key=os.getenv("LLM_API_KEY", "ollama"),
+        model=os.getenv("LLM_MODEL", "llama3"),
+        base_url=os.getenv("LLM_API_BASE", "http://localhost:11434/v1")
+    )
+
+    stt = LocalWhisperSTT(whisper_service=whisper_service)
+    tts = LocalTTS(tts_service=tts_service)
+
+    messages = [
+        {"role": "system", "content": "You are a helpful AI assistant. Keep responses extremely brief and conversational."}
+    ]
+    context = OpenAILLMContext(messages)
+    context_aggregator = llm.create_context_aggregator(context)
+
+    pipeline = Pipeline([
+        transport.input(),
+        stt,
+        context_aggregator.user(),
+        llm,
+        tts,
+        transport.output(),
+        context_aggregator.assistant(),
+    ])
+
+    task = PipelineTask(pipeline, PipelineParams(allow_interruptions=True))
+    
+    @transport.event_handler("on_client_connected")
+    async def on_client_connected(transport, websocket):
+        print("Agent Client connected")
+
+    @transport.event_handler("on_client_disconnected")
+    async def on_client_disconnected(transport, websocket):
+        print("Agent Client disconnected")
+        final_text = "\n".join([m['content'] for m in context.messages if m['role'] in ['user', 'assistant']])
+        if final_text.strip():
+            asyncio.create_task(asyncio.to_thread(obsidian_service.generate_note, final_text))
+
+    runner = PipelineRunner()
+    await runner.run(task)
 
 
 # ──────────────────────────────────────────────

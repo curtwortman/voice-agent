@@ -9,10 +9,11 @@ A high-performance, containerized voice service providing **OpenAI-compatible Te
 - **🎯 OpenAI API Compatible** - Drop-in replacement for `POST /v1/audio/speech`. Works with any standard OpenAI client.
 - **🎙️ Advanced Voice Cloning** - Create and reuse custom voice profiles using the `clone:ProfileName` convention.
 - **⚡ Real-Time Streaming** - Low-latency token-by-token PCM streaming for conversational AI.
+- **🤖 Voice Agent (Pipecat)** - Native integration with the Pipecat framework for ultra-low latency, VAD-driven conversational flows.
 - **📝 Obsidian Integration** - Automatic meeting transcription with LLM-based post-processing (summaries, action items, and knowledge graph links).
 - **🔴 Dual-GPU Optimized** - Native support for AMD Radeon (ROCm) and NVIDIA (CUDA) with hardware-specific tuning.
 - **📊 Multi-Format Support** - Export to MP3, Opus, AAC, FLAC, WAV, or raw PCM.
-- **🖥️ Web Interface** - Interactive frontend with audio visualization and recording controls.
+- **🖥️ Web Interface** - Interactive frontend with audio visualization and recording controls, featuring a "Minimized Modal" and "Full Playground" view.
 
 ---
 
@@ -21,7 +22,7 @@ A high-performance, containerized voice service providing **OpenAI-compatible Te
 The system operates as a dual-container stack:
 
 1.  **`vllm-omni`**: Serves the `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` model using vLLM, optimized for GPU inference.
-2.  **`api-gateway`**: A FastAPI service that orchestrates STT (Faster-Whisper), proxies TTS requests, manages the Voice Library, and triggers Obsidian workflows.
+2.  **`api-gateway`**: A FastAPI service that orchestrates STT (Faster-Whisper), proxies TTS requests, manages the Voice Library, triggers Obsidian workflows, and provides the Pipecat WebSocket endpoint.
 
 ---
 
@@ -88,6 +89,7 @@ If you want to review the frontend with hot-reload or without rebuilding the ful
 - [**Hardware Optimization**](docs/HARDWARE_OPTIMIZATION.md) - AMD and NVIDIA specific tuning details.
 - [**Obsidian Integration**](docs/OBSIDIAN_INTEGRATION.md) - Configuring the meeting transcription pipeline.
 - [**Product Requirements (PRD)**](docs/PRD.md) - Project goals and technical constraints.
+- [**Test Documentation**](docs/TEST.md) - Testing architecture including unit and E2E validation.
 
 ---
 
