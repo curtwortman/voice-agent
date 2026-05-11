@@ -30,6 +30,10 @@ function App() {
   const [activeVoice, setActiveVoice] = useState('Thalia');
   const [isMaximized, setIsMaximized] = useState(false); // Default to minimized
   
+  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [activeTranscript, setActiveTranscript] = useState("Hi. Thank you for calling... My name is Ali... I'm calling because I want to change my payment information before the renewal date next month.");
+  
   const [features, setFeatures] = useState([
     { id: 'smart_format', name: 'Smart Format', enabled: true },
     { id: 'punctuation', name: 'Punctuation', enabled: true },
@@ -81,6 +85,33 @@ function App() {
       console.error(e);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleRunAnalysis = async (task: string) => {
+    setActiveAnalysis(task);
+    setIsAnalyzing(true);
+    setAnalysisResult(null);
+    try {
+      const apiBase = `${settings.backendIp}:${settings.backendPort}`;
+      const tokenHeader: Record<string, string> = settings.backendToken ? { "Authorization": `Bearer ${settings.backendToken}` } : {};
+      const response = await fetch(`${window.location.protocol}//${apiBase}/v1/audio/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...tokenHeader },
+        body: JSON.stringify({
+          transcript: activeTranscript,
+          task: task
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAnalysisResult(data.analysis);
+      }
+    } catch(e) {
+      console.error(e);
+      setAnalysisResult("Analysis failed. Please check backend connection.");
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -221,7 +252,7 @@ function App() {
 
           {view === 'intelligence' && (
               <div className="compact-layout" style={{ gridTemplateColumns: '1fr 1.2fr' }}>
-                  <div className="analysis-menu">
+                   <div className="analysis-menu">
                       <div style={{ marginBottom: '1.5rem' }}>
                          <span className="field-label">Call Center: Customer Support</span>
                          <div style={{ background: '#1a1a1a', borderRadius: '12px', padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
@@ -232,17 +263,25 @@ function App() {
                             <span style={{ fontSize: '0.75rem' }}>01:44</span>
                          </div>
                       </div>
-                      <button className={`analysis-btn ${activeAnalysis === 'summarization' ? 'active' : ''}`} onClick={() => setActiveAnalysis('summarization')}>Summarization</button>
-                      <button className={`analysis-btn ${activeAnalysis === 'sentiment' ? 'active' : ''}`} onClick={() => setActiveAnalysis('sentiment')}>Sentiment Analysis</button>
-                      <button className={`analysis-btn ${activeAnalysis === 'intent' ? 'active' : ''}`} onClick={() => setActiveAnalysis('intent')}>Intent Detection</button>
+                      <button className={`analysis-btn ${activeAnalysis === 'summarization' ? 'active' : ''} ${isAnalyzing && activeAnalysis === 'summarization' ? 'opacity-50' : ''}`} onClick={() => handleRunAnalysis('summarization')} disabled={isAnalyzing}>Summarization</button>
+                      <button className={`analysis-btn ${activeAnalysis === 'sentiment' ? 'active' : ''} ${isAnalyzing && activeAnalysis === 'sentiment' ? 'opacity-50' : ''}`} onClick={() => handleRunAnalysis('sentiment')} disabled={isAnalyzing}>Sentiment Analysis</button>
+                      <button className={`analysis-btn ${activeAnalysis === 'intent' ? 'active' : ''} ${isAnalyzing && activeAnalysis === 'intent' ? 'opacity-50' : ''}`} onClick={() => handleRunAnalysis('intent')} disabled={isAnalyzing}>Intent Detection</button>
                   </div>
                   <div className="text-area-container">
-                      <div style={{ marginBottom: '1.5rem' }}>
-                        <span style={{ color: '#13ef95', fontWeight: 600 }}>Summary:</span> The customer calls to change their payment info before renewal.
+                      <div style={{ marginBottom: '1.5rem', minHeight: '100px' }}>
+                        <span style={{ color: '#13ef95', fontWeight: 600 }}>{activeAnalysis.charAt(0).toUpperCase() + activeAnalysis.slice(1)}:</span>
+                        <p style={{ marginTop: '0.5rem' }}>
+                          {isAnalyzing ? "Analyzing..." : (analysisResult || "Click an analysis task to begin.")}
+                        </p>
                       </div>
                       <div style={{ flex: 1, borderTop: '1px solid #222', paddingTop: '1rem' }}>
                         <span className="field-label">Transcript</span>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginTop: '0.5rem' }}>Hi. Thank you for calling... My name is Ali...</p>
+                        <textarea 
+                          className="w-full bg-transparent border-none outline-none text-white text-xs mt-2 resize-none" 
+                          rows={4}
+                          value={activeTranscript}
+                          onChange={(e) => setActiveTranscript(e.target.value)}
+                        />
                       </div>
                   </div>
               </div>

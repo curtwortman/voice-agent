@@ -302,6 +302,66 @@ def test_e2e_voice_agent():
         finally:
             browser.close()
 
+def test_e2e_tts_narration():
+    """
+    Verifies Use Case 3: TTS Narration.
+    """
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(FRONTEND_URL)
+        configure_backend_port(page)
+
+        print("Testing TTS Narration...")
+        page.locator('button[role="tab"]:has-text("Text to Speech")').click()
+        
+        test_msg = "Testing the text to speech narration system."
+        page.fill('textarea[placeholder*="Ready to hear it in action"]', test_msg)
+        
+        # Intercept the fetch request to /v1/audio/speech
+        with page.expect_request("**/v1/audio/speech") as first:
+            page.locator('button.btn-primary:has-text("Generate")').click()
+        
+        request = first.value
+        assert request.method == "POST"
+        payload = request.post_data_json
+        assert payload["input"] == test_msg
+        
+        # Wait for the button to be re-enabled (generation finished)
+        expect(page.locator('button.btn-primary:has-text("Generate")')).to_be_enabled(timeout=30000)
+        print("TTS Narration test passed.")
+        browser.close()
+
+def test_e2e_audio_intelligence():
+    """
+    Verifies Use Case 4: Audio Intelligence.
+    """
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(FRONTEND_URL)
+        configure_backend_port(page)
+
+        print("Testing Audio Intelligence...")
+        page.locator('button[role="tab"]:has-text("Audio Intelligence")').click()
+        
+        # Click "Sentiment Analysis"
+        page.locator('button.analysis-btn:has-text("Sentiment Analysis")').click()
+        
+        # Wait for the result to appear (not "Click an analysis task..." and not "Analyzing...")
+        # We'll wait for a text that looks like a sentiment result.
+        # Since it's an LLM, we just check it's not the initial/loading text.
+        try:
+            page.wait_for_function(
+                "() => !document.body.innerText.includes('Click an analysis task') && !document.body.innerText.includes('Analyzing...')",
+                timeout=45000
+            )
+            print("Successfully received Intelligence analysis!")
+        except Exception as e:
+            pytest.fail("Timed out waiting for Audio Intelligence analysis results.")
+
+        browser.close()
+
 if __name__ == "__main__":
     # For manual running
     setup_audio()

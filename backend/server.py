@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from whisper_service import WhisperService
 from tts_service import TTSService, FORMAT_MEDIA_TYPES, SUPPORTED_FORMATS
 from obsidian_service import ObsidianService
+from llm_service import LLMService, AnalysisService
 
 from pipecat.transports.network.fastapi_websocket import FastAPIWebsocketTransport, FastAPIWebsocketParams
 from pipecat.serializers.protobuf import ProtobufFrameSerializer
@@ -53,6 +54,8 @@ app.add_middleware(
 whisper_service = WhisperService(model_size="base", device="cpu", compute_type="int8")
 obsidian_service = ObsidianService()
 tts_service = TTSService()
+llm_service = LLMService()
+analysis_service = AnalysisService(llm_service)
 
 
 # ──────────────────────────────────────────────
@@ -208,6 +211,24 @@ async def upload_voice_profile(
         },
     }
 
+
+# ──────────────────────────────────────────────
+# Audio Intelligence Endpoint
+# ──────────────────────────────────────────────
+
+class AnalysisRequest(BaseModel):
+    transcript: str
+    task: str = "summarization"  # summarization, sentiment, intent
+
+@app.post("/v1/audio/analyze")
+async def analyze_audio(request: AnalysisRequest):
+    """Analyze audio transcript for insights."""
+    result = await analysis_service.analyze(request.transcript, request.task)
+    return {
+        "status": "ok",
+        "task": request.task,
+        "analysis": result
+    }
 
 # ──────────────────────────────────────────────
 # STT WebSocket Endpoint
