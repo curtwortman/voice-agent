@@ -12,6 +12,9 @@ We apply the following environment variables in `Dockerfile.vllm.rocm`:
 - `FLASH_ATTENTION_TRITON_AMD_ENABLE=1`: Enables Triton-based Flash Attention for AMD GPUs.
 - `GPU_MAX_HW_QUEUES=1`: Prevents hardware queue contention.
 - `GPU_KEEPALIVE_INTERVAL=15`: Performs a tiny periodic matmul on the GPU to prevent it from dropping into low-power DPM states, which would otherwise cause "latency spikes" for the first request after a period of idleness.
+- **VRAM Management**: Set `GPU_MEM_UTILIZATION=0.3` for stable concurrent inference.
+- **Enforce Eager**: Essential for 40-series cards to avoid memory fragmentation.
+- **Port Mapping**: Default vLLM port is `8009`.
 - `MIOPEN_FIND_MODE=FAST`: Optimizes MIOpen kernel selection.
 
 ### GFX Override
@@ -25,6 +28,9 @@ The NVIDIA stack uses standard `vllm` optimizations and supports:
 - **CUDA 12.2+**
 - **Flash Attention 2**
 - **Paged Attention**
+- **VRAM Management**: Set `GPU_MEM_UTILIZATION=0.3` in `.env` to prevent OOM on 16GB-24GB cards.
+- **Enforce Eager**: The `--enforce-eager` flag is used by default to disable CUDAGraphs, saving ~2GB of VRAM at the cost of slight latency.
+- **Port Mapping**: Default vLLM port is `8009`.
 
 The `api-gateway` image is a lightweight `python:3.12-slim` base, as STT (Faster-Whisper) currently runs on the CPU to ensure broad compatibility across both hardware types.
 

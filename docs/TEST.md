@@ -77,7 +77,7 @@ pytest tests/integration/ -v
 ```
 
 ### Test Logic
-The main script `tests/integration/test_e2e_pipeline.py` contains three test cases:
+The main script `tests/integration/test_e2e_pipeline.py` contains five test cases:
 
 **`test_e2e_transcription`**
 1.  Generates a synthetic speech audio file (`input.mp3`) with the text "The quick brown fox jumps over the lazy dog" using `gTTS`.
@@ -99,6 +99,17 @@ The main script `tests/integration/test_e2e_pipeline.py` contains three test cas
 1.  Navigates to the Voice Agent tab and clicks the orb to activate the Pipecat agent.
 2.  Verifies the agent state transitions to "Agent Listening...".
 3.  Waits up to 45 seconds for an AGENT response message to appear in the chat UI.
+
+**`test_e2e_tts_narration`**
+1.  Navigates to the Text to Speech tab.
+2.  Inputs test text and clicks "Generate".
+3.  Intercepts the network request to verify the correct payload is sent to `/v1/audio/speech`.
+4.  Waits for the generation to complete and the UI to respond.
+
+**`test_e2e_audio_intelligence`**
+1.  Navigates to the Audio Intelligence tab.
+2.  Triggers a "Sentiment Analysis" task.
+3.  Waits for the LLM-generated result to appear in the DOM, verifying the backend analysis loop.
 
 ---
 
