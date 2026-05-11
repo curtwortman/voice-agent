@@ -3,7 +3,7 @@ import {
   Mic, Activity, Brain, Bot, 
   X, Copy, Download, Volume2, 
   Zap, Settings as SettingsIcon,
-  Code, Terminal, ChevronDown, Maximize2, PlayCircle, Upload
+  Terminal, ChevronDown, Maximize2, PlayCircle, Upload
 } from 'lucide-react'
 import './index.css'
 import { useAudioAnalyzer } from './hooks/useAudioAnalyzer'
@@ -153,7 +153,6 @@ function App() {
     }
   };
 
-  const getRequestJson = () => JSON.stringify({ model: "nova-3", language: "en", smart_format: true }, null, 2);
 
   return (
     <div className={`app-wrapper ${isMaximized ? 'full-view' : ''}`} style={{ display: 'block' }}>
@@ -381,7 +380,6 @@ function App() {
               <X size={20} color="var(--text-dim)" onClick={() => setIsMaximized(false)} style={{ cursor: 'pointer' }} />
             </div>
           </nav>
-          <div className="playground-grid">
           <div className="playground-grid" style={{ gridTemplateColumns: '300px 1fr 350px' }}>
             <aside className="playground-sidebar">
               <div className="sidebar-section">
