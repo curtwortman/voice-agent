@@ -56,11 +56,11 @@ describe('App Connection Settings', () => {
     
     // Check for IP, Port, Token fields
     const ipInput = screen.getByPlaceholderText('127.0.0.1');
-    const portInput = screen.getByPlaceholderText('8000');
+    const portInput = screen.getByPlaceholderText('8008');
     const tokenInput = screen.getByPlaceholderText('Optional Bearer Token');
 
     expect(ipInput).toHaveValue('127.0.0.1');
-    expect(portInput).toHaveValue('8000');
+    expect(portInput).toHaveValue('8008');
     expect(tokenInput).toHaveValue('');
 
     // Update IP and Port

@@ -42,6 +42,7 @@ function App() {
     { id: 'punctuation', name: 'Punctuation', enabled: true },
     { id: 'low_latency', name: 'Ultra Low Latency', enabled: true },
     { id: 'interrupt', name: 'Allow Interruptions', enabled: true },
+    { id: 'video', name: 'Enable Video', enabled: false },
   ]);
 
   const [settings, setSettings] = useState<Settings>({
@@ -405,14 +406,29 @@ function App() {
             <div className="panel" style={{ borderRight: '1px solid var(--border-subtle)' }}>
               <div className="panel-header"><span><Terminal size={14} /> ACTIVE SESSION</span></div>
               <div className="panel-content" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <div className="speak-container" style={{ minHeight: '200px' }}>
-                   <div 
-                     onClick={toggleAgent}
-                     className={`w-[160px] h-[160px] rounded-full border-4 flex items-center justify-center text-center cursor-pointer transition-all duration-500 ${isAgentConnected ? 'border-[#ff33cc] shadow-[0_0_50px_rgba(255,51,204,0.3)]' : 'border-[#333]'}`}
-                   >
-                     {isAgentConnected ? <Activity size={40} color="#ff33cc" className="animate-pulse" /> : <Mic size={40} color="#707070" />}
-                   </div>
-                   <div style={{ width: '100%', height: '50px' }}><Visualizer getAudioData={getAudioData} isMicOn={isMicOn || isAgentConnected} isDemoPlaying={false} /></div>
+                <div className="speak-container" style={{ minHeight: '300px', background: '#000', borderRadius: '12px', border: '1px solid #222', position: 'relative', overflow: 'hidden' }}>
+                   {features.find(f => f.id === 'video' && f.enabled) ? (
+                     <div style={{ width: '100%', height: '100%', display: 'grid', gridTemplateRows: '1fr 1fr', gap: '2px' }}>
+                        <div style={{ background: '#111', display: 'flex', alignItems: 'center', justifyCenter: 'center', position: 'relative' }}>
+                           <span style={{ position: 'absolute', top: '10px', left: '10px', fontSize: '0.6rem', color: '#707070' }}>REMOTE (BOT)</span>
+                           <Activity size={60} color="#ff33cc" className={isAgentConnected ? "animate-pulse" : ""} style={{ margin: 'auto' }} />
+                        </div>
+                        <div style={{ background: '#111', display: 'flex', alignItems: 'center', justifyCenter: 'center', position: 'relative' }}>
+                           <span style={{ position: 'absolute', top: '10px', left: '10px', fontSize: '0.6rem', color: '#707070' }}>LOCAL (YOU)</span>
+                           <Mic size={40} color="#13ef95" style={{ margin: 'auto' }} />
+                        </div>
+                     </div>
+                   ) : (
+                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', padding: '2rem' }}>
+                        <div 
+                          onClick={toggleAgent}
+                          className={`w-[160px] h-[160px] rounded-full border-4 flex items-center justify-center text-center cursor-pointer transition-all duration-500 ${isAgentConnected ? 'border-[#ff33cc] shadow-[0_0_50px_rgba(255,51,204,0.3)]' : 'border-[#333]'}`}
+                        >
+                          {isAgentConnected ? <Activity size={40} color="#ff33cc" className="animate-pulse" /> : <Mic size={40} color="#707070" />}
+                        </div>
+                        <div style={{ width: '100%', height: '50px' }}><Visualizer getAudioData={getAudioData} isMicOn={isMicOn || isAgentConnected} isDemoPlaying={false} /></div>
+                     </div>
+                   )}
                 </div>
 
                 <div className="sidebar-section" style={{ border: 'none', padding: 0 }}>

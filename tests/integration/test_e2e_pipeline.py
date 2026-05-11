@@ -43,7 +43,10 @@ def audio_fixture():
     if os.path.exists(VAULT_DIR):
         for f in os.listdir(VAULT_DIR):
             if f.endswith(".md"):
-                os.remove(os.path.join(VAULT_DIR, f))
+                try:
+                    os.remove(os.path.join(VAULT_DIR, f))
+                except PermissionError:
+                    print(f"Skipping deletion of {f} due to permission issues.")
     else:
         os.makedirs(VAULT_DIR, exist_ok=True)
         
@@ -190,8 +193,8 @@ def test_e2e_ui_interactions():
         # Maximize button has title="Full Playground"
         page.locator('button[title="Full Playground"]').click()
         # Wait for "REQUEST" and "RESPONSE" panels to appear
-        expect(page.locator('text=REQUEST')).to_be_visible()
-        expect(page.locator('text=RESPONSE')).to_be_visible()
+        expect(page.locator('text=ACTIVE SESSION')).to_be_visible()
+        expect(page.locator('text=Context Inspector')).to_be_visible()
         
         # Minimize button (Activity icon) is in the top left, but let's just use the X in the top right.
         # Actually, the X in the top right has no title. The App.tsx line 299: <X size={20} color="var(--text-dim)" onClick={() => setIsMaximized(false)} />
@@ -297,31 +300,28 @@ def test_e2e_voice_agent():
         # The backend processes the audio, transcribes it, runs the LLM, and responds.
         # We wait for a DOM element representing the AGENT's response.
         # In App.tsx: <span className="font-semibold text-xs opacity-50 block mb-1">AGENT</span>
-        print("Waiting for AGENT response message from backend...")
-        
         try:
             # We give the LLM up to 45 seconds to generate and stream the response back.
-            agent_message_label = page.locator('span:has-text("AGENT")').first
-            expect(agent_message_label).to_be_visible(timeout=45000)
-            print("Successfully received AGENT response!")
+            # Role labels in UI are uppercase: USER, ASSISTANT
+            assistant_message_label = page.locator('span:has-text("ASSISTANT")').first
+            expect(assistant_message_label).to_be_visible(timeout=45000)
+            print("Successfully received ASSISTANT response!")
             
             # Optionally grab the text of the message for logging
-            # The structure is: <div><span>AGENT</span><span>The actual message...</span></div>
-            # We can grab the parent div's inner text.
-            response_text = agent_message_label.locator('..').inner_text()
-            print(f"Agent Response: {response_text.replace('AGENT', '').strip()}")
+            response_text = assistant_message_label.locator('..').inner_text()
+            print(f"Assistant Response: {response_text.replace('ASSISTANT', '').strip()}")
             
             # Verify Obsidian File Generation (Use Case 1)
             # We need to disconnect first to trigger the obsidian save
             print("Disconnecting Agent to trigger Obsidian save...")
-            orb_locator.click()
+            page.locator('text=Agent Listening...').click()
             time.sleep(5)
             files = [f for f in os.listdir(VAULT_DIR) if f.endswith(".md")]
             assert len(files) > 1, "No Obsidian note was generated for the agent session (expected 2 files total now)."
             print("Agent session saved to Obsidian.")
             
         except Exception as e:
-            print(f"Timed out waiting for AGENT response. Backend/LLM might be slow or offline.")
+            print(f"Timed out waiting for ASSISTANT response. Backend/LLM might be slow or offline.")
             raise e
 
         finally:

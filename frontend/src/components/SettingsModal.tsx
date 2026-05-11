@@ -122,7 +122,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
               type="text"
               value={settings.backendPort}
               onChange={(e) => handleChange('backendPort', e.target.value)}
-              placeholder="8000"
+              placeholder="8008"
               className="select-input"
             />
           </div>
