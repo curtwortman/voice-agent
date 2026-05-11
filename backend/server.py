@@ -330,8 +330,15 @@ async def agent_websocket_endpoint(websocket: WebSocket):
     stt = LocalWhisperSTT(whisper_service=whisper_service)
     tts = LocalTTS(tts_service=tts_service)
 
+    # Load system prompt
+    prompt_path = os.path.join(os.path.dirname(__file__), "bot_prompt.txt")
+    system_prompt = "You are a helpful AI assistant. Keep responses extremely brief and conversational."
+    if os.path.exists(prompt_path):
+        with open(prompt_path, "r") as f:
+            system_prompt = f.read().strip()
+
     messages = [
-        {"role": "system", "content": "You are a helpful AI assistant. Keep responses extremely brief and conversational."}
+        {"role": "system", "content": system_prompt}
     ]
     context = OpenAILLMContext(messages)
     context_aggregator = llm.create_context_aggregator(context)

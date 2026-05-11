@@ -101,3 +101,9 @@
 - Speaker diarization for multi-participant dictation and meeting transcripts.
 - Packaging the web frontend into a standalone native Linux desktop orb application (via Tauri or Electron).
 - Dynamic tag taxonomy and vault path configuration for the Obsidian integration.
+
+## 5. Technical Highlights
+- **VRAM Tuning**: Exposed `GPU_MEM_UTILIZATION` for fine-grained hardware control across NVIDIA/ROCM.
+- **Custom Persona**: Externalized system prompt to `bot_prompt.txt` for easy agent customization without code changes.
+- **WebSocket Transport**: Bi-directional audio streaming via `FastAPIWebsocketTransport` with Protobuf serialization.
+- **Low-Latency VAD**: Silero VAD integration for natural, interruption-friendly conversational loops.

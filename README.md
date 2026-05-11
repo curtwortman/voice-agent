@@ -40,12 +40,18 @@ The system is configured via a `.env` file generated during setup:
 | :--- | :--- | :--- |
 | `API_PORT` | `8008` | Gateway API port |
 | `VLLM_PORT` | `8009` | vLLM-Omni model server port |
-| `GPU_MEM_UTILIZATION` | `0.3` | Fraction of GPU VRAM for vLLM (tune for your card) |
+| `GPU_MEM_UTILIZATION` | `0.3` | `0.3` | Tuning parameter to prevent VRAM OOM |
+| `FRONTEND_PORT` | `5173` | `5173` | Port for development server |
 | `VLLM_API_URL` | `http://localhost:8009/v1` | Internal model server URL |
 | `VOICE_LIBRARY_DIR` | `./voice_library` | Path to stored voice profiles |
 | `LLM_API_BASE` | `http://localhost:11434/v1` | LLM endpoint for Obsidian summaries |
 | `LLM_MODEL` | `llama3` | LLM model name for conversational and Obsidian tasks |
 | `HSA_OVERRIDE_GFX_VERSION` | `11.0.0` | AMD GFX version (RDNA3 default, ROCm only) |
+
+### 🛠️ Customization
+
+- **System Prompt**: Edit `backend/bot_prompt.txt` to change the voice agent's personality and instructions. Changes apply on the next connection.
+- **Voice Library**: Add `.wav` or `.mp3` samples to `./voice_library` to clone new voices.
 
 ## Hardware & Platform
 Tested on:
