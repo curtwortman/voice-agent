@@ -7,7 +7,7 @@ class ObsidianService:
         self.api_base = os.getenv("LLM_API_BASE", "http://localhost:11434/v1")
         self.api_key = os.getenv("LLM_API_KEY", "ollama")
         self.model = os.getenv("LLM_MODEL", "llama3")
-        self.vault_dir = "/app/vault"
+        self.vault_dir = os.getenv("OBSIDIAN_VAULT_DIR", "/app/vault")
         os.makedirs(self.vault_dir, exist_ok=True)
         
     def generate_note(self, transcript: str):

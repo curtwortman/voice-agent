@@ -1,14 +1,14 @@
-# 🎙️ Voice Cloning Guide
+# Voice Cloning Guide
 
 Voice Agent allows you to clone any voice from a short audio sample and reuse it indefinitely via the `clone:ProfileName` convention.
 
-## 🛠️ How it Works
+## How it Works
 
 1.  **Reference Audio**: Provide a 5-20 second sample of the target voice. The audio should be clean, mono, and at least 16kHz.
 2.  **Profile Creation**: The `api-gateway` saves the audio and metadata into the `voice_library`.
 3.  **Inference**: When you request a voice starting with `clone:`, the system loads the reference audio and uses the Qwen3-TTS Base model to synthesize speech that matches the reference.
 
-## 📝 Creating a Profile
+## Creating a Profile
 
 ### Via API
 Use the `/v1/voices/clone` endpoint:
@@ -36,7 +36,7 @@ voice_library/profiles/curt/
 }
 ```
 
-## 📣 Using Your Clone
+## Using Your Clone
 
 Once a profile is created, use it in any TTS request by prefixing the ID with `clone:`:
 
@@ -48,7 +48,7 @@ Once a profile is created, use it in any TTS request by prefixing the ID with `c
 }
 ```
 
-## 💡 Tips for Better Clones
+## Tips for Better Clones
 - **Clean Audio**: Avoid background noise or music.
 - **Natural Speech**: Use a sample that represents the desired tone and pace.
 - **Length**: 10-15 seconds is usually the "sweet spot" for high fidelity.

@@ -38,3 +38,10 @@ obsidian_vault/
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+crash_log.txt
+
+# Packages
+*.deb

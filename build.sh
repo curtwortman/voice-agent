@@ -2,7 +2,7 @@
 set -euo pipefail
 
 export PROJECT="voice-agent"
-TARGET="all"
+TARGET="nvidia"
 NO_CACHE=0
 
 usage() {
@@ -110,5 +110,5 @@ echo "Build complete for target: ${TARGET}"
 echo "========================================"
 echo ""
 echo "To start the service:"
-echo "  ROCm:   docker compose -f docker-compose.rocm.yml up -d"
-echo "  NVIDIA: docker compose -f docker-compose.nvidia.yml up -d"
+echo "  Default (NVIDIA): docker compose up -d"
+echo "  ROCm:             docker compose -f docker-compose.rocm.yml up -d"

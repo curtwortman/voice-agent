@@ -8,6 +8,7 @@ from tts_service import TTSService, FORMAT_MEDIA_TYPES, SUPPORTED_FORMATS
 from obsidian_service import ObsidianService
 
 from pipecat.transports.network.fastapi_websocket import FastAPIWebsocketTransport, FastAPIWebsocketParams
+from pipecat.serializers.protobuf import ProtobufFrameSerializer
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -294,7 +295,8 @@ async def agent_websocket_endpoint(websocket: WebSocket):
             add_wav_header=False,
             vad_enabled=True,
             vad_analyzer=SileroVADAnalyzer(),
-            vad_audio_passthrough=True
+            vad_audio_passthrough=True,
+            serializer=ProtobufFrameSerializer()
         )
     )
 

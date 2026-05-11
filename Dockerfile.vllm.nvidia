@@ -1,4 +1,9 @@
 FROM vllm/vllm-openai:v0.20.0
 
+# Install vllm-omni specific dependencies
+COPY vllm-omni/requirements/cuda.txt /tmp/cuda.txt
+COPY vllm-omni/requirements/common.txt /tmp/common.txt
+RUN pip install -r /tmp/cuda.txt
+
 # The command is provided in docker-compose.nvidia.yml, but we set a default here
-CMD ["python3", "-m", "vllm.entrypoints.omni.api_server", "--model", "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice", "--engine-use-ray", "--pipeline-parallel-size", "1", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["python3", "-m", "vllm_omni.entrypoints.openai.api_server", "--model", "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice", "--pipeline-parallel-size", "1", "--host", "0.0.0.0", "--port", "8009", "--gpu-memory-utilization", "0.3", "--enforce-eager", "--max-model-len", "4096"]

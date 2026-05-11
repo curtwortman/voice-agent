@@ -8,6 +8,9 @@ export interface Settings {
   maxDuration: number;
   transcriptionEnabled: boolean;
   transcriptionMode: 'recording' | 'continuous';
+  backendIp: string;
+  backendPort: string;
+  backendToken: string;
 }
 
 interface SettingsModalProps {
@@ -51,8 +54,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '2rem' }}>
           <div>
-            <label className="field-label">Audio Engine Output</label>
+            <label htmlFor="audio-output" className="field-label">Audio Engine Output</label>
             <select
+              id="audio-output"
               value={settings.audioOutput}
               onChange={(e) => handleChange('audioOutput', e.target.value)}
               className="select-input"
@@ -63,8 +67,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
           </div>
 
           <div>
-            <label className="field-label">Local Vault Path</label>
+            <label htmlFor="save-folder" className="field-label">Local Vault Path</label>
             <input
+              id="save-folder"
               type="text"
               value={settings.saveFolder}
               onChange={(e) => handleChange('saveFolder', e.target.value)}
@@ -74,8 +79,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
           </div>
 
           <div>
-            <label className="field-label">Recording Timeout (Min)</label>
+            <label htmlFor="max-duration" className="field-label">Recording Timeout (Min)</label>
             <input
+              id="max-duration"
               type="number"
               min="1"
               value={settings.maxDuration}
@@ -95,6 +101,42 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
             <label htmlFor="enable-trans" className="field-label" style={{ margin: 0, textTransform: 'none' }}>
               Enable Real-time Transcription
             </label>
+          </div>
+
+          <div>
+            <label htmlFor="backend-ip" className="field-label">Backend IP</label>
+            <input
+              id="backend-ip"
+              type="text"
+              value={settings.backendIp}
+              onChange={(e) => handleChange('backendIp', e.target.value)}
+              placeholder="127.0.0.1"
+              className="select-input"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="backend-port" className="field-label">Backend Port</label>
+            <input
+              id="backend-port"
+              type="text"
+              value={settings.backendPort}
+              onChange={(e) => handleChange('backendPort', e.target.value)}
+              placeholder="8000"
+              className="select-input"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="backend-token" className="field-label">Backend Token</label>
+            <input
+              id="backend-token"
+              type="password"
+              value={settings.backendToken}
+              onChange={(e) => handleChange('backendToken', e.target.value)}
+              placeholder="Optional Bearer Token"
+              className="select-input"
+            />
           </div>
         </div>
         

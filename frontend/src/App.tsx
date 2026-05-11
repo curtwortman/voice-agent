@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { 
   Mic, Activity, Brain, Bot, 
   X, Copy, Download, Volume2, 
-  Zap, 
+  Zap, Settings as SettingsIcon,
   Code, Terminal, ChevronDown, Maximize2, PlayCircle, Upload
 } from 'lucide-react'
 import './index.css'
@@ -25,6 +25,9 @@ function App() {
   const [view, setView] = useState<ViewType>('stt');
   const [subView, setSubView] = useState<SubView>('flux');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activeAnalysis, setActiveAnalysis] = useState('summarization');
+  const [activeChip, setActiveChip] = useState('Healthcare');
+  const [activeVoice, setActiveVoice] = useState('Thalia');
   const [isMaximized, setIsMaximized] = useState(false); // Default to minimized
   
   const [features, setFeatures] = useState([
@@ -41,7 +44,10 @@ function App() {
     filenamePrefix: 'recording',
     maxDuration: 60,
     transcriptionEnabled: true,
-    transcriptionMode: 'recording'
+    transcriptionMode: 'continuous',
+    backendIp: '127.0.0.1',
+    backendPort: '8008',
+    backendToken: ''
   });
 
   const { isMicOn, transcription, toggleMic, getAudioData, isAgentConnected, toggleAgent, agentMessages } = useAudioAnalyzer(settings);
@@ -53,14 +59,15 @@ function App() {
     if (!ttsText) return;
     setIsGenerating(true);
     try {
-      const apiBase = import.meta.env.VITE_API_BASE || `${window.location.host}`;
+      const apiBase = `${settings.backendIp}:${settings.backendPort}`;
+      const tokenHeader: Record<string, string> = settings.backendToken ? { "Authorization": `Bearer ${settings.backendToken}` } : {};
       const response = await fetch(`${window.location.protocol}//${apiBase}/v1/audio/speech`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...tokenHeader },
         body: JSON.stringify({
           input: ttsText,
           model: "tts-1",
-          voice: "default",
+          voice: activeVoice,
           response_format: "mp3"
         })
       });
@@ -112,9 +119,14 @@ function App() {
                     </button>
                   </div>
                 </div>
-                <button className="flex items-center gap-2 bg-[#1a1a1a] border border-white/10 px-4 py-2 rounded-lg text-gray-500 text-sm hover:text-white hover:border-white transition-colors ml-4 whitespace-nowrap" onClick={() => setIsMaximized(true)}>
-                  <Maximize2 size={14} /> Full Playground
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1rem' }}>
+                  <button className="flex items-center justify-center bg-[#1a1a1a] border border-white/10 w-9 h-9 rounded-lg text-gray-500 hover:text-white hover:border-white transition-colors" onClick={() => setIsSettingsOpen(true)} title="Settings">
+                    <SettingsIcon size={16} />
+                  </button>
+                  <button className="flex items-center justify-center bg-[#1a1a1a] border border-white/10 w-9 h-9 rounded-lg text-gray-500 hover:text-white hover:border-white transition-colors" onClick={() => setIsMaximized(true)} title="Full Playground">
+                    <Maximize2 size={16} />
+                  </button>
+                </div>
               </div>
 
           {view === 'stt' && (
@@ -126,7 +138,7 @@ function App() {
               
               <div className="compact-layout">
                 <div className="speak-container">
-                   <button className={`speak-btn-large ${isMicOn ? 'active' : ''}`} onClick={toggleMic}>
+                   <button className={`speak-btn-large ${isMicOn ? 'active' : ''}`} onClick={toggleMic} title={isMicOn ? "Turn Mic Off" : "Turn Mic On"}>
                       <Mic size={48} />
                       <span style={{ marginTop: '0.8rem', fontWeight: 600, fontSize: '0.9rem' }}>Speak</span>
                    </button>
@@ -165,8 +177,8 @@ function App() {
                     )}
                   </div>
                   <div className="text-area-footer">
-                    <div className="footer-action"><Copy size={16} /> Copy</div>
-                    <div className="footer-action"><Download size={16} /> Download</div>
+                    <div className="footer-action" onClick={() => { navigator.clipboard.writeText(transcription || ''); }}><Copy size={16} /> Copy</div>
+                    <div className="footer-action" onClick={() => { const blob = new Blob([transcription || ''], { type: 'text/plain' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'transcription.txt'; a.click(); URL.revokeObjectURL(url); }}><Download size={16} /> Download</div>
                   </div>
                 </div>
               </div>
@@ -186,13 +198,15 @@ function App() {
                   </div>
                   <div>
                       <div className="chip-group" style={{ marginBottom: '1.5rem' }}>
-                          <div className="chip">Healthcare</div><div className="chip">Finance</div>
-                          <div className="chip">Support</div><div className="chip">Sales</div>
+                          <div className={`chip ${activeChip === 'Healthcare' ? 'active' : ''}`} onClick={() => setActiveChip('Healthcare')}>Healthcare</div>
+                          <div className={`chip ${activeChip === 'Finance' ? 'active' : ''}`} onClick={() => setActiveChip('Finance')}>Finance</div>
+                          <div className={`chip ${activeChip === 'Support' ? 'active' : ''}`} onClick={() => setActiveChip('Support')}>Support</div>
+                          <div className={`chip ${activeChip === 'Sales' ? 'active' : ''}`} onClick={() => setActiveChip('Sales')}>Sales</div>
                       </div>
                       <div className="voice-list" style={{ maxHeight: '200px' }}>
-                          <div className="voice-item active"><div className="avatar-mini" /> <PlayCircle size={14} /> Thalia <span style={{ color: 'var(--text-dim)', marginLeft: 'auto' }}>Eng (US)</span></div>
-                          <div className="voice-item"><div className="avatar-mini" /> <PlayCircle size={14} /> Odysseus</div>
-                          <div className="voice-item"><div className="avatar-mini" /> <PlayCircle size={14} /> Harmonia</div>
+                          <div className={`voice-item ${activeVoice === 'Thalia' ? 'active' : ''}`} onClick={() => setActiveVoice('Thalia')}><div className="avatar-mini" /> <PlayCircle size={14} /> Thalia <span style={{ color: 'var(--text-dim)', marginLeft: 'auto' }}>Eng (US)</span></div>
+                          <div className={`voice-item ${activeVoice === 'Odysseus' ? 'active' : ''}`} onClick={() => setActiveVoice('Odysseus')}><div className="avatar-mini" /> <PlayCircle size={14} /> Odysseus</div>
+                          <div className={`voice-item ${activeVoice === 'Harmonia' ? 'active' : ''}`} onClick={() => setActiveVoice('Harmonia')}><div className="avatar-mini" /> <PlayCircle size={14} /> Harmonia</div>
                       </div>
                       <button 
                         className={`btn btn-primary w-full mt-8 h-12 justify-center transition-all duration-300 hover:scale-[1.02] ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -218,9 +232,9 @@ function App() {
                             <span style={{ fontSize: '0.75rem' }}>01:44</span>
                          </div>
                       </div>
-                      <button className="analysis-btn active">Summarization</button>
-                      <button className="analysis-btn">Sentiment Analysis</button>
-                      <button className="analysis-btn">Intent Detection</button>
+                      <button className={`analysis-btn ${activeAnalysis === 'summarization' ? 'active' : ''}`} onClick={() => setActiveAnalysis('summarization')}>Summarization</button>
+                      <button className={`analysis-btn ${activeAnalysis === 'sentiment' ? 'active' : ''}`} onClick={() => setActiveAnalysis('sentiment')}>Sentiment Analysis</button>
+                      <button className={`analysis-btn ${activeAnalysis === 'intent' ? 'active' : ''}`} onClick={() => setActiveAnalysis('intent')}>Intent Detection</button>
                   </div>
                   <div className="text-area-container">
                       <div style={{ marginBottom: '1.5rem' }}>
@@ -283,7 +297,12 @@ function App() {
                 <button className={`compact-tab ${view === 'intelligence' ? 'active' : ''}`} onClick={() => setView('intelligence')}>Analyze</button>
               </div>
             </div>
-            <X size={20} color="var(--text-dim)" onClick={() => setIsMaximized(false)} style={{ cursor: 'pointer' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <button title="Settings" onClick={() => setIsSettingsOpen(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                <SettingsIcon size={20} color="var(--text-dim)" />
+              </button>
+              <X size={20} color="var(--text-dim)" onClick={() => setIsMaximized(false)} style={{ cursor: 'pointer' }} />
+            </div>
           </nav>
           <div className="playground-grid">
             <aside className="playground-sidebar">
@@ -301,7 +320,7 @@ function App() {
               <div className="panel-header"><span><Terminal size={14} /> REQUEST</span></div>
               <div className="panel-content">
                 <div className="speak-container" style={{ minHeight: '250px', marginBottom: '2rem' }}>
-                   <button className={`speak-btn-large ${isMicOn ? 'active' : ''}`} onClick={toggleMic} style={{ width: '140px', height: '140px' }}>
+                   <button className={`speak-btn-large ${isMicOn ? 'active' : ''}`} onClick={toggleMic} style={{ width: '140px', height: '140px' }} title={isMicOn ? "Turn Mic Off" : "Turn Mic On"}>
                       <Mic size={32} />
                    </button>
                    <div style={{ width: '100%', height: '50px' }}><Visualizer getAudioData={getAudioData} isMicOn={isMicOn} isDemoPlaying={false} /></div>

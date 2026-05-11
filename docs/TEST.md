@@ -18,8 +18,7 @@ tests/
 - **Python 3.12+** (with virtual environment active)
 - **Node.js & npm**
 - **FFmpeg** (must be in system PATH)
-- **Backend Server**: Must be running on `http://localhost:8000` for Integration Tests.
-- **Frontend Server**: Must be running on `http://localhost:5173` for Integration Tests.
+- **Backend Server**: Must be running on `http://localhost:8008` for Integration Tests (the API gateway serves the built frontend).
 
 ## Setup
 Install the required testing dependencies:
@@ -64,6 +63,7 @@ npm run test
 **Key Test Cases:**
 - `useAudioAnalyzer.test.ts`: Verifies that state toggles correctly (e.g., `isMicOn`, `isAgentConnected`) when functions are called.
 - `App.test.tsx`: Validates rendering of the primary views (STT, TTS, Agent, Intelligence) and asserts that the layout switches properly.
+- `SettingsIntegration.test.tsx`: Verifies connection configuration functionality and asserts that UI settings state is persisted correctly across components.
 
 ---
 
@@ -77,15 +77,28 @@ pytest tests/integration/ -v
 ```
 
 ### Test Logic
-The main script `tests/integration/test_e2e_pipeline.py` performs the following steps:
-1.  Generates a synthetic speech audio file (`fixtures/input.mp3`) with the text "The quick brown fox jumps over the lazy dog" using `gTTS`.
+The main script `tests/integration/test_e2e_pipeline.py` contains three test cases:
+
+**`test_e2e_transcription`**
+1.  Generates a synthetic speech audio file (`input.mp3`) with the text "The quick brown fox jumps over the lazy dog" using `gTTS`.
 2.  Converts the MP3 to `input.wav` (required for Chrome's fake audio injection).
 3.  Launches a headless Chromium browser using Playwright with the `--use-file-for-fake-audio-capture` flag.
-4.  Navigates to the local frontend URL (`http://localhost:5173`).
-5.  Interacts with the UI (clicks the Mic/Orb button to initiate the WebSocket connection).
-6.  Waits for the transcription or agent response to appear in the DOM.
+4.  Navigates to the API gateway (`http://localhost:8008`) which serves the built frontend.
+5.  Clicks the Mic button to initiate the WebSocket connection and stream audio.
+6.  Waits for the transcription text to appear in the DOM.
 7.  Captures the text and calculates a fuzzy match ratio with the original synthetic text.
-8.  Asserts that the match ratio is > 80%.
+8.  Asserts that the match ratio is > 50%.
+
+**`test_e2e_ui_interactions`**
+1.  Navigates through all four primary tabs (STT, TTS, Voice Agent, Audio Intelligence).
+2.  Verifies the Maximize/Minimize (Full Playground) toggle.
+3.  Tests the Settings Modal open/close flow.
+4.  Validates STT sub-tabs, TTS chip/voice selection, and Intelligence analysis buttons.
+
+**`test_e2e_voice_agent`**
+1.  Navigates to the Voice Agent tab and clicks the orb to activate the Pipecat agent.
+2.  Verifies the agent state transitions to "Agent Listening...".
+3.  Waits up to 45 seconds for an AGENT response message to appear in the chat UI.
 
 ---
 

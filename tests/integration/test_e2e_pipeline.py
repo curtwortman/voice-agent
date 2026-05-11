@@ -5,13 +5,15 @@ from gtts import gTTS
 from pydub import AudioSegment
 from fuzzywuzzy import fuzz
 import time
+import re
 
 # Constants
 TEST_TEXT = "The quick brown fox jumps over the lazy dog"
 INPUT_MP3 = "tests/input.mp3"
 INPUT_WAV = "tests/input.wav"
 TRANSCRIPTION_FILE = "tests/transcription.txt"
-FRONTEND_URL = "http://localhost:5173"
+FRONTEND_PORT = os.getenv("API_PORT", "8008")
+FRONTEND_URL = f"http://localhost:{FRONTEND_PORT}"
 
 def setup_audio():
     """Generates MP3 and converts to WAV for browser injection."""
@@ -39,6 +41,16 @@ def audio_fixture():
     yield
     teardown_audio()
 
+def configure_backend_port(page):
+    """Opens Settings Modal and sets the correct Backend Port dynamically."""
+    print("Configuring Backend Port to match environment...")
+    api_port = os.getenv("API_PORT", "8008")
+    page.locator('button[title="Settings"]').click()
+    expect(page.locator('h2:has-text("System Configuration")')).to_be_visible()
+    page.fill('input#backend-port', api_port)
+    page.locator('button:has-text("Apply Changes")').click()
+    expect(page.locator('h2:has-text("System Configuration")')).not_to_be_visible()
+
 def test_e2e_transcription():
     """
     Launches browser with fake audio input, interacts with the app,
@@ -64,6 +76,9 @@ def test_e2e_transcription():
         # Ensure page is loaded
         expect(page.locator("text=Transcribing...")).not_to_be_visible()
 
+        # Configure Port so WebSockets hit the right backend
+        configure_backend_port(page)
+
         # Check for Settings Button (New Feature Verification)
         expect(page.locator('button[title="Settings"]')).to_be_visible()
 
@@ -85,11 +100,8 @@ def test_e2e_transcription():
         # Wait a moment for mic to activate
         time.sleep(1)
 
-        # Click Record
-        # Based on App.tsx: title="Start Recording"
-        record_button = page.locator('button[title="Start Recording"]')
-        record_button.click()
-        print("Clicked Start Recording")
+        # No 'Start Recording' button anymore. Clicking 'Mic ON' automatically starts the agent stream.
+        print("Audio stream started.")
 
         # Wait for transcription
         # The audio is short, but we need to give it time to play through the fake device and be processed.
@@ -108,15 +120,12 @@ def test_e2e_transcription():
                 timeout=20000
             )
         except Exception as e:
-            print("Timed out waiting for specific text. Checking what we have...")
+            pytest.fail(f"Timed out waiting for transcription. The backend on port {os.getenv('API_PORT', '8008')} may be offline, or the WebSocket connection to /ws/transcribe failed.")
 
         # Scrape text
         # We can target the div that contains the transcription.
-        # It has a style with backgroundColor rgba(0, 0, 0, 0.7)
-        # Or we can just grab the text from the specific container if we can identify it.
-        # The container is inside .transcription-overlay > div (the second one)
-
-        transcription_div = page.locator('.transcription-overlay > div').nth(1)
+        # It is inside the new UI element .text-area-content
+        transcription_div = page.locator('.text-area-content')
         transcribed_text = transcription_div.inner_text()
 
         print(f"Captured Transcription: {transcribed_text}")
@@ -132,8 +141,166 @@ def test_e2e_transcription():
         browser.close()
 
         # Assert
-        # We expect a high match ratio. 80 should be safe for minor differences.
         assert ratio > 50, f"Transcription failed. Expected '{TEST_TEXT}', got '{transcribed_text}' (Ratio: {ratio})"
+
+def test_e2e_ui_interactions():
+    """
+    Verifies that all primary UI buttons and views function correctly.
+    """
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(FRONTEND_URL)
+
+        # Ensure page is loaded
+        expect(page.locator("text=Flux: Voice Agents")).to_be_visible()
+
+        # 1. Navigation Tabs
+        print("Testing Navigation...")
+        page.locator('button[role="tab"]:has-text("Text to Speech")').click()
+        expect(page.locator('textarea[placeholder*="Ready to hear it in action"]')).to_be_visible()
+
+        page.locator('button[role="tab"]:has-text("Voice Agent")').click()
+        expect(page.locator('text=Click here to')).to_be_visible()
+
+        page.locator('button[role="tab"]:has-text("Audio Intelligence")').click()
+        expect(page.locator('button.analysis-btn:has-text("Summarization")')).to_be_visible()
+
+        page.locator('button[role="tab"]:has-text("Speech to Text")').click()
+        expect(page.locator("text=Flux: Voice Agents")).to_be_visible()
+
+        # 2. Full Playground (Maximize/Minimize)
+        print("Testing Maximize/Minimize...")
+        # Maximize button has title="Full Playground"
+        page.locator('button[title="Full Playground"]').click()
+        # Wait for "REQUEST" and "RESPONSE" panels to appear
+        expect(page.locator('text=REQUEST')).to_be_visible()
+        expect(page.locator('text=RESPONSE')).to_be_visible()
+        
+        # Minimize button (Activity icon) is in the top left, but let's just use the X in the top right.
+        # Actually, the X in the top right has no title. The App.tsx line 299: <X size={20} color="var(--text-dim)" onClick={() => setIsMaximized(false)} />
+        # I can just click the Activity icon which also closes it.
+        # Let's add a locator for the nav > div > svg
+        page.locator('.playground-grid').locator('..').locator('nav svg').last.click()
+        expect(page.locator('text=REQUEST')).not_to_be_visible()
+
+        # 3. Settings Modal
+        print("Testing Settings Modal...")
+        page.locator('button[title="Settings"]').click()
+        expect(page.locator('h2:has-text("System Configuration")')).to_be_visible()
+        # Click Apply Changes button in modal to close it
+        page.locator('button:has-text("Apply Changes")').click()
+        expect(page.locator('h2:has-text("System Configuration")')).not_to_be_visible()
+
+        # 4. STT Sub-Views & Action Buttons
+        print("Testing STT Sub-tabs & Action Buttons...")
+        page.locator('button[role="tab"]:has-text("Speech to Text")').click()
+        page.locator('div.sub-tab:has-text("Nova: Transcription")').click()
+        
+        # Verify "Use Your Own File" button
+        upload_btn = page.locator('button.btn-outline:has-text("Use Your Own File")')
+        expect(upload_btn).to_be_visible()
+        upload_btn.click()
+
+        # Verify "Copy" and "Download" buttons
+        page.locator('div.footer-action:has-text("Copy")').click()
+        page.locator('div.footer-action:has-text("Download")').click()
+
+        # 5. TTS Actions & Filters
+        print("Testing TTS Generate & Filters...")
+        page.locator('button[role="tab"]:has-text("Text to Speech")').click()
+        
+        # Test Chip Selection
+        finance_chip = page.locator('div.chip:has-text("Finance")')
+        finance_chip.click()
+        expect(finance_chip).to_have_class(re.compile(r"active"))
+
+        # Test Voice Selection
+        odysseus_voice = page.locator('div.voice-item:has-text("Odysseus")')
+        odysseus_voice.click()
+        expect(odysseus_voice).to_have_class(re.compile(r"active"))
+
+        # Test Generate Button
+        generate_btn = page.locator('button.btn-primary:has-text("Generate")')
+        expect(generate_btn).to_be_visible()
+        
+        # 6. Intelligence Analysis Buttons
+        print("Testing Intelligence Buttons...")
+        page.locator('button[role="tab"]:has-text("Audio Intelligence")').click()
+        sentiment_btn = page.locator('button.analysis-btn:has-text("Sentiment Analysis")')
+        sentiment_btn.click()
+        expect(sentiment_btn).to_have_class(re.compile(r"active"))
+
+        browser.close()
+
+def test_e2e_voice_agent():
+    """
+    Verifies the full Pipecat Voice Agent pipeline: 
+    Fake Mic -> STT -> LLM -> TTS -> Agent UI Response.
+    """
+    with sync_playwright() as p:
+        # Launch options for fake audio injection
+        launch_options = {
+            "args": [
+                "--use-fake-ui-for-media-stream",
+                "--use-fake-device-for-media-stream",
+                f"--use-file-for-fake-audio-capture={os.path.abspath(INPUT_WAV)}"
+            ],
+            "headless": True
+        }
+
+        browser = p.chromium.launch(**launch_options)
+        page = browser.new_page()
+
+        print(f"Navigating to {FRONTEND_URL}")
+        page.goto(FRONTEND_URL)
+
+        # Ensure page is loaded
+        expect(page.locator("text=Flux: Voice Agents")).to_be_visible()
+
+        # Configure Port so WebSockets hit the right backend
+        configure_backend_port(page)
+
+        # Navigate to Voice Agent tab
+        print("Navigating to Voice Agent tab...")
+        page.locator('button[role="tab"]:has-text("Voice Agent")').click()
+        
+        # Click the orb to activate the agent
+        print("Activating Agent Orb...")
+        orb_locator = page.locator('text=Click here to')
+        orb_locator.click()
+
+        # The state should change to "Agent Listening..."
+        try:
+            expect(page.locator('text=Agent Listening...')).to_be_visible(timeout=5000)
+        except AssertionError:
+            pytest.fail(f"Failed to connect to Voice Agent WebSocket on port {os.getenv('API_PORT', '8008')}. Ensure the backend is running and the port is correct.")
+
+        print("Agent is listening. Fake audio is streaming to the backend...")
+
+        # The backend processes the audio, transcribes it, runs the LLM, and responds.
+        # We wait for a DOM element representing the AGENT's response.
+        # In App.tsx: <span className="font-semibold text-xs opacity-50 block mb-1">AGENT</span>
+        print("Waiting for AGENT response message from backend...")
+        
+        try:
+            # We give the LLM up to 45 seconds to generate and stream the response back.
+            agent_message_label = page.locator('span:has-text("AGENT")').first
+            expect(agent_message_label).to_be_visible(timeout=45000)
+            print("Successfully received AGENT response!")
+            
+            # Optionally grab the text of the message for logging
+            # The structure is: <div><span>AGENT</span><span>The actual message...</span></div>
+            # We can grab the parent div's inner text.
+            response_text = agent_message_label.locator('..').inner_text()
+            print(f"Agent Response: {response_text.replace('AGENT', '').strip()}")
+            
+        except Exception as e:
+            print(f"Timed out waiting for AGENT response. Backend/LLM might be slow or offline.")
+            raise e
+
+        finally:
+            browser.close()
 
 if __name__ == "__main__":
     # For manual running

@@ -1,5 +1,12 @@
 #!/bin/bash
-set -euo pipefail
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    # Script is being executed directly
+    set -euo pipefail
+    EXIT_CMD="exit"
+else
+    # Script is being sourced
+    EXIT_CMD="return"
+fi
 
 export PROJECT="voice-agent"
 WITH_OPS_TOOLS=0
@@ -19,7 +26,7 @@ for arg in "$@"; do
     case "$arg" in
         -h|--help)
             usage
-            exit 0
+            $EXIT_CMD 0
             ;;
         --with-ops-tools)
             WITH_OPS_TOOLS=1
@@ -27,7 +34,7 @@ for arg in "$@"; do
         *)
             echo "Unknown option: $arg" >&2
             usage >&2
-            exit 1
+            $EXIT_CMD 1
             ;;
     esac
 done
@@ -85,9 +92,22 @@ export WORKDIR="$PWD"
 echo "========================================"
 echo "Installing Python Dependencies"
 
-# Install vLLM with ROCm Support
-echo "Installing vLLM 0.20.0+rocm721..."
-uv pip install vllm==0.20.0+rocm721 --extra-index-url https://wheels.vllm.ai/rocm/0.20.0/rocm721
+# Detect GPU and install appropriate vLLM
+if command -v nvidia-smi &> /dev/null; then
+    echo "NVIDIA GPU detected. Installing vLLM 0.20.0 with CUDA support..."
+    uv pip install vllm==0.20.0
+    
+    echo "Configuring NVIDIA Container Toolkit for Docker..."
+    sudo apt-get install -y nvidia-container-toolkit
+    sudo nvidia-ctk runtime configure --runtime=docker
+    sudo systemctl restart docker
+elif command -v rocm-smi &> /dev/null || lsmod | grep -q amdgpu; then
+    echo "AMD GPU detected. Installing vLLM 0.20.0+rocm721..."
+    uv pip install vllm==0.20.0+rocm721 --extra-index-url https://wheels.vllm.ai/rocm/0.20.0/rocm721
+else
+    echo "No supported GPU detected. Defaulting to CPU/NVIDIA..."
+    uv pip install vllm==0.20.0
+fi
 
 # Install vLLM-Omni from Source
 if [ ! -d "vllm-omni" ]; then
@@ -103,6 +123,10 @@ uv pip install -e .
 cd ..
 
 uv pip list
+
+echo "Installing test dependencies..."
+uv pip install playwright pytest-playwright gTTS pydub fuzzywuzzy python-Levenshtein pytest pytest-asyncio
+playwright install chromium
 
 # Determine directories
 PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")"
@@ -140,13 +164,20 @@ add_env_var() {
 
 add_env_var "PROJECT" "${PROJECT}"
 add_env_var "RESULTS_DIR" "${DEFAULT_RESULTS_DIR}"
-add_env_var "VLLM_USE_ROCM" "1"
-add_env_var "MIOPEN_USER_DB_PATH" "${PROJECT_ROOT}/miopen"
-# Consumer Radeon GPUs often need the GFX version overridden (e.g., 11.0.0 for RDNA3, 10.3.0 for RDNA2)
-add_env_var "HSA_OVERRIDE_GFX_VERSION" "11.0.0"
-add_env_var "HIP_VISIBLE_DEVICES" "0"
+if command -v nvidia-smi &> /dev/null; then
+    add_env_var "VLLM_USE_ROCM" "0"
+else
+    add_env_var "VLLM_USE_ROCM" "1"
+    add_env_var "MIOPEN_USER_DB_PATH" "${PROJECT_ROOT}/miopen"
+    # Consumer Radeon GPUs often need the GFX version overridden (e.g., 11.0.0 for RDNA3, 10.3.0 for RDNA2)
+    add_env_var "HSA_OVERRIDE_GFX_VERSION" "11.0.0"
+    add_env_var "HIP_VISIBLE_DEVICES" "0"
+fi
 add_env_var "API_HOST" "0.0.0.0"
-add_env_var "API_PORT" "8000"
+add_env_var "API_PORT" "8008"
+add_env_var "VLLM_PORT" "8009"
+add_env_var "FRONTEND_PORT" "5173"
+add_env_var "GPU_MEM_UTILIZATION" "0.3"
 add_env_var "LLM_API_BASE" "http://localhost:11434/v1"
 add_env_var "LLM_API_KEY" "ollama"
 add_env_var "LLM_MODEL" "llama3"

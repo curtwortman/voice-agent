@@ -21,7 +21,9 @@ services:
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
       - ./miopen:/root/miopen
+      - ./vllm-omni:/vllm-omni
     environment:
+      - PYTHONPATH=/vllm-omni
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
       - VLLM_USE_ROCM=1
       - MIOPEN_USER_DB_PATH=/root/miopen
@@ -30,13 +32,17 @@ services:
       - HSA_OVERRIDE_GFX_VERSION=${HSA_OVERRIDE_GFX_VERSION:-11.0.0}
       - HSE_AMDGPU_TARGET=gfx1100
       - HIP_VISIBLE_DEVICES=${HIP_VISIBLE_DEVICES:-0}
+    entrypoint: [""]
     command: >
-      python -m vllm.entrypoints.omni.api_server 
+      python3 -m vllm_omni.entrypoints.openai.api_server 
       --model Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice 
-      --engine-use-ray 
       --pipeline-parallel-size 1 
       --host 0.0.0.0 
-      --port 8001
+      --port ${VLLM_PORT:-8002} 
+      --gpu-memory-utilization ${GPU_MEM_UTILIZATION:-0.3} 
+      --enforce-eager 
+      --max-model-len 4096 
+      --trust-remote-code
 
   api-gateway:
     build:
@@ -48,9 +54,10 @@ services:
       - ./backend:/app
       - ./frontend/dist:/app/static
       - ./obsidian_vault:/app/vault
+    
       - ./voice_library:/app/voice_library
     environment:
-      - VLLM_API_URL=http://localhost:8001/v1
+      - VLLM_API_URL=http://localhost:${VLLM_PORT:-8002}/v1
       - LLM_API_BASE=${LLM_API_BASE:-http://localhost:11434/v1}
       - LLM_API_KEY=${LLM_API_KEY:-ollama}
       - LLM_MODEL=${LLM_MODEL:-llama3}

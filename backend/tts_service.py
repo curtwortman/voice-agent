@@ -130,7 +130,7 @@ FORMAT_MEDIA_TYPES = {
 
 class TTSService:
     def __init__(self, api_url=None):
-        self.api_url = api_url or os.getenv("VLLM_API_URL", "http://localhost:8001/v1")
+        self.api_url = api_url or os.getenv("VLLM_API_URL", "http://localhost:8009/v1")
         self.model_name = os.getenv("TTS_MODEL_NAME", "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice")
         self.voice_library = VoiceLibrary()
 

@@ -56,7 +56,8 @@ export const useAudioAnalyzer = (settings: Settings) => {
     if (settings.audioOutput) params.append('format', settings.audioOutput);
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const apiBase = import.meta.env.VITE_API_BASE || `${window.location.host}`;
+    const apiBase = `${settings.backendIp}:${settings.backendPort}`;
+    if (settings.backendToken) params.append('token', settings.backendToken);
     const wsUrl = `${wsProtocol}//${apiBase}/ws/transcribe?${params.toString()}`;
     socketRef.current = new WebSocket(wsUrl);
 
@@ -79,14 +80,14 @@ export const useAudioAnalyzer = (settings: Settings) => {
       console.log('WebSocket Disconnected');
       setIsTranscribing(false);
     };
-  }, [settings.transcriptionEnabled, settings.saveFolder, settings.filenamePrefix, settings.audioOutput]);
+  }, [settings.transcriptionEnabled, settings.saveFolder, settings.filenamePrefix, settings.audioOutput, settings.backendIp, settings.backendPort, settings.backendToken]);
 
   const connectAgentWebSocket = useCallback(() => {
     if (agentSocketRef.current?.readyState === WebSocket.OPEN) return;
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const apiBase = import.meta.env.VITE_API_BASE || `${window.location.host}`;
-    const wsUrl = `${wsProtocol}//${apiBase}/ws/agent`;
+    const apiBase = `${settings.backendIp}:${settings.backendPort}`;
+    const wsUrl = settings.backendToken ? `${wsProtocol}//${apiBase}/ws/agent?token=${settings.backendToken}` : `${wsProtocol}//${apiBase}/ws/agent`;
     
     const socket = new WebSocket(wsUrl);
     agentSocketRef.current = socket;
@@ -140,7 +141,8 @@ export const useAudioAnalyzer = (settings: Settings) => {
       setIsAgentConnected(false);
       stopAudio(); // Stop mic when agent disconnects
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.backendIp, settings.backendPort, settings.backendToken]);
 
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);

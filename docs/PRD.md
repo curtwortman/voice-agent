@@ -9,6 +9,43 @@
 - **Use Case 1 (Conversational Agent):** Low-latency, multi-turn voice interactions for an AI assistant.
 - **Use Case 2 (Meeting Notes/Dictation):** High-accuracy offline dictation and transcription. Automatically processing meeting recordings into Obsidian-compliant Markdown files with LLM-generated summaries and graph links.
 - **Use Case 3 (Narration):** High-quality TTS and voice cloning using the user's voice for custom content generation.
+- **Use Case 4 (Audio Intelligence):** Analyze transcripts and calls to extract summaries, sentiment, and intent.
+
+### Use Case 1: Conversational Voice Agent
+**Goal:** Engage in low-latency, multi-turn, natural voice interactions with an AI assistant.
+**Workflow:**
+1. The user opens the web application and navigates to the **Voice Agent** tab in the slidebox UI.
+2. The user clicks the central animated orb ("Click here to talk to me") to initiate a session.
+3. The orb state changes to "Agent Listening...", indicating the WebSocket (`/ws/agent`) is actively streaming audio.
+4. The user speaks naturally. If the user pauses or interrupts the AI, the underlying Pipecat pipeline (with Silero VAD) automatically handles turn-taking.
+**Expected Outcome:** The agent responds with high-quality, cloned text-to-speech audio with extremely low latency, creating a seamless conversational experience. The conversation history is also displayed in the UI and automatically saved to the Obsidian vault upon disconnection.
+
+### Use Case 2: Dictation and Meeting Transcription
+**Goal:** Dictate notes or transcribe meetings with high accuracy for offline record-keeping.
+**Workflow:**
+1. The user navigates to the **Speech to Text** tab and selects the "Nova: Transcription" sub-view.
+2. The user either clicks the large "Mic On" button to begin dictating or clicks "Use Your Own File" to upload an existing meeting recording (`.mp3` or `.wav`).
+3. For live dictation, the audio is continuously streamed to the backend (`/ws/transcribe`) and transcribed in real-time. For file uploads, the file is processed in chunks.
+4. The transcribed text appears in the large text area, formatted dynamically based on language detection.
+**Expected Outcome:** A highly accurate text transcription is generated. The user can easily copy or download the text using the provided footer action buttons, or rely on the backend to automatically parse the transcript into an Obsidian-compliant Markdown note with LLM-generated summaries and tags.
+
+### Use Case 3: Text-to-Speech Narration and Voice Cloning
+**Goal:** Generate high-quality voice audio from text using custom voice profiles for narration.
+**Workflow:**
+1. The user navigates to the **Text to Speech** tab.
+2. The user types or pastes their desired script into the input text area.
+3. The user selects a specific industry context (e.g., Finance, Healthcare) using the filter chips, and selects a desired Voice Profile (e.g., Thalia, Odysseus) from the list.
+4. The user clicks the "Generate" button, triggering an API call to the backend (`/v1/audio/speech`).
+**Expected Outcome:** The system generates an MP3 audio file using the selected voice profile and automatically plays it back in the browser.
+
+### Use Case 4: Audio Intelligence and Analysis
+**Goal:** Analyze existing transcripts or calls to extract actionable insights such as sentiment or intents.
+**Workflow:**
+1. The user navigates to the **Audio Intelligence** tab.
+2. An existing recording or transcript is loaded into the active context.
+3. The user clicks an analysis action button: "Summarization", "Sentiment Analysis", or "Intent Detection".
+4. The frontend queries the backend LLM service with the transcript context and the selected analysis prompt.
+**Expected Outcome:** The UI displays a structured, color-coded output (e.g., a green summary note) highlighting the extracted insights alongside the original transcript.
 
 ## 3. Comprehensive Feature List
 
@@ -42,12 +79,18 @@
   - Autonomous post-processing of transcripts and conversation logs.
   - LLM-powered generation of structured Markdown notes including Action Items, Tags, Summaries, and `[[wikilinks]]`.
   - Automatic saving of notes directly into a designated local Obsidian vault directory.
+- **Robust Automated Testing:**
+  - **Unit Tests:** React Testing Library and Vitest covering component renders, settings state, and button functionality.
+  - **E2E Playwright:** Simulates real browser hardware injection (`--use-file-for-fake-audio-capture`), validating the full pipeline from physical audio to backend WebSocket Whisper STT.
 
 ### 3.3 Integration & Architecture
-- **Hardware Acceleration:** Dual-GPU hardware compatibility (AMD ROCm `HSA_OVERRIDE_GFX_VERSION=11.0.0` and NVIDIA CUDA 12.2).
+- **Hardware Acceleration:** Dual-GPU hardware compatibility (AMD ROCm `HSA_OVERRIDE_GFX_VERSION=11.0.0` and NVIDIA CUDA 12.2). Container profiles leverage `--trust-remote-code` and `--enforce-eager` to prevent vLLM OOM crashes.
 - **Dockerized Microservices:**
-  - `vllm-omni` (Port 8001): Dedicated container for heavy TTS/LLM tensor operations.
-  - `api-gateway` (Port 8000): FastAPI orchestration container managing websockets, Obsidian parsing, and state.
+  - `vllm-omni` (Port 8009): Dedicated container for heavy TTS/LLM tensor operations. Enforces a `--max-model-len 4096` to ensure extreme stability during continuous streaming.
+  - `api-gateway` (Port 8008): FastAPI orchestration container managing websockets, Obsidian parsing, and state.
+- **Centralized Environment Configuration (`.env`):**
+  - Fully decentralized host and port assignments. 
+  - Automated `start.sh` and `test.sh` lifecycle scripts that dynamically bind WebSockets and avoid port-in-use conflicts (via `ss` preflight checks).
 - **WebSocket Routing Strategy:**
   - **`/ws/transcribe` (Offline/Dictation):** Receives chunked `.webm` audio. Transcodes and processes via Whisper. High accuracy, higher latency. Ideal for meeting recordings.
   - **`/ws/agent` (Conversational):** Receives raw PCM audio. Managed entirely by the Pipecat pipeline (VAD -> STT -> LLM Context -> TTS -> Transport). Ultra-low latency, multi-turn capable.

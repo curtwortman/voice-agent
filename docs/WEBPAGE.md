@@ -12,11 +12,12 @@ The application provides a dual-view system to cater to both casual users and de
 
 *   **The Centered Modal (Default):** The core interface is housed within a large, centered modal container (max-w-5xl). This creates a focused workspace with a polished, glassmorphism-inspired aesthetic, blurring out peripheral distractions.
 *   **Two-Pane System:** Across almost all views, the modal utilizes a strict two-pane grid layout. The Left Pane is consistently dedicated to **Input & Control** (speaking, uploading, selecting features), while the Right Pane is dedicated to **Output & Results** (transcripts, summaries, generated audio).
-*   **Global Navigation:** The top of the modal houses four primary navigation tabs that persist across the experience:
+*   **Global Navigation:** The top of the modal houses four primary navigation tabs that persist across the experience, along with a Settings (gear) icon in the top right:
     1.  Speech to Text
     2.  Text to Speech
     3.  Voice Agent
     4.  Audio Intelligence
+    5.  Settings Configuration (Gear Icon)
 *   **Expandability (Full Playground):** A toggle allows users to break out of the Minimized View into a full-screen, 3-column IDE-style layout for deeper API inspection. 
 
 ### 2.1 View Enhancements & Tailwind CSS Leverage
@@ -84,7 +85,7 @@ This view focuses on conversational, low-latency interaction.
     *   A massive, stylized circular element dominating the pane.
     *   Features a dynamic, multi-colored border (neon green and purple gradients).
     *   Contains the directive: "Click here to talk to me" in teal.
-    *   A footer link indicating the underlying tech ("Built with Deepgram APIs") and a terminal-style link to ">_ Explore More Prompts".
+    *   A footer link indicating the underlying tech ("Built with Pipecat & vLLM").
 *   **Right Pane (Agent Context):**
     *   **Horizontal Voice Carousel:** A row of small, circular avatars with names below them (Thalia, Odysseus, Arcas, etc.). The active persona is fully opaque, while inactive ones are slightly dimmed.
     *   **Chat Box:** A standard text container displaying the agent's greeting or current conversational context.
@@ -100,6 +101,19 @@ This view provides deep analysis (summaries, sentiment) of pre-recorded or recen
     *   **Header:** Dynamically reflects the selected analysis mode (e.g., "Summarization").
     *   **Result Block:** The primary output (e.g., the summary paragraph) is highlighted. The key label (e.g., "Summary:") is colored in the primary teal `#13ef95` for immediate scanning.
     *   **Source Transcript:** Below the primary result, the original full transcript is displayed in a slightly smaller, dimmer font, providing necessary context without overwhelming the primary insight.
+
+### 4.5 Settings Modal
+This view provides critical configuration for backend connectivity and audio parameters.
+
+*   **Modal Container:**
+    *   A clean, centered modal overlay that sits above the existing interface.
+    *   Dark background matching the global theme, with neon teal `#13ef95` highlights for active elements.
+*   **Form Elements:**
+    *   **Backend Server Configuration:** Inputs for `API Host` and `API Port` to define the target Voice Agent gateway.
+    *   **Authentication:** `Auth Token` input field for securing the backend connection.
+    *   **Transcription Control:** Toggles and dropdowns for setting preferences like transcription modes.
+*   **Actions:**
+    *   "Save" and "Close" controls to persist the configuration across the session.
 
 ---
 

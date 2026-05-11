@@ -1,8 +1,8 @@
-# 📚 API Reference
+# API Reference
 
 The Voice Agent API is designed to be a drop-in replacement for the OpenAI TTS API, while also providing discovery and management endpoints.
 
-## 🎙️ Text-to-Speech (TTS)
+## Text-to-Speech (TTS)
 
 ### Generate Speech (OpenAI Compatible)
 `POST /v1/audio/speech`
@@ -27,7 +27,7 @@ The Voice Agent API is designed to be a drop-in replacement for the OpenAI TTS A
 
 ---
 
-## 🔍 Discovery
+## Discovery
 
 ### List Voices
 `GET /v1/voices`
@@ -41,9 +41,23 @@ Returns available TTS models.
 `GET /health`
 Returns the status of the gateway and underlying services.
 
+**Example Response:**
+```json
+{
+  "status": "ok",
+  "version": "0.2.0",
+  "services": {
+    "stt": "faster-whisper",
+    "tts": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+    "obsidian": true
+  },
+  "vllm_api_url": "http://localhost:8009/v1"
+}
+```
+
 ---
 
-## 🎙️ Voice Management
+## Voice Management
 
 ### Create Voice Clone
 `POST /v1/voices/clone` (Multipart Form)
@@ -56,7 +70,7 @@ Returns the status of the gateway and underlying services.
 
 ---
 
-## 📝 Speech-to-Text (STT)
+## Speech-to-Text (STT)
 
 ### Live Transcription
 `WS /ws/transcribe`
@@ -67,3 +81,18 @@ Binary WebSocket endpoint for streaming audio data.
   - `filename_prefix`: (Optional) Prefix for the saved file.
 
 Returns live text transcripts as they are processed. On disconnect, an Obsidian meeting note is automatically generated if the session contained speech.
+
+---
+
+## Voice Agent (Pipecat)
+
+### Real-Time Conversational Agent
+`WS /ws/agent`
+
+Binary WebSocket endpoint for the Pipecat-powered conversational AI loop. Audio is streamed bidirectionally using Protobuf frame serialization.
+
+- **Input**: Raw PCM audio from the user's microphone.
+- **Processing Pipeline**: `VAD (Silero) → STT (Faster-Whisper) → LLM (OpenAI-compatible) → TTS (Qwen3-TTS) → Audio Playback`.
+- **Output**: Agent audio responses streamed back as binary frames; text transcripts sent as JSON `{"role": "...", "content": "..."}` messages.
+
+On disconnect, the full conversation is automatically saved to the Obsidian vault.

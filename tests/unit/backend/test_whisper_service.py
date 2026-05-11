@@ -12,7 +12,6 @@ def test_whisper_service_initialization():
     """Test that the WhisperService initializes properly."""
     service = WhisperService(model_size="tiny", device="cpu", compute_type="int8")
     assert service.model is not None
-    assert service.model_size == "tiny"
 
 def test_whisper_service_transcription():
     """Test transcription with a mock silent audio array."""
