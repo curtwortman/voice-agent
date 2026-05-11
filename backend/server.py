@@ -213,6 +213,33 @@ async def upload_voice_profile(
 
 
 # ──────────────────────────────────────────────
+# Prompt Management Endpoints
+# ──────────────────────────────────────────────
+
+@app.get("/v1/agent/prompt")
+async def get_agent_prompt():
+    """Read the current bot prompt from file."""
+    prompt_path = os.path.join(os.path.dirname(__file__), "bot_prompt.txt")
+    if os.path.exists(prompt_path):
+        with open(prompt_path, "r") as f:
+            return {"prompt": f.read().strip()}
+    return {"prompt": "You are a helpful AI assistant. Keep responses extremely brief and conversational."}
+
+class PromptUpdate(BaseModel):
+    prompt: str
+
+@app.post("/v1/agent/prompt")
+async def update_agent_prompt(request: PromptUpdate):
+    """Update the bot prompt file."""
+    prompt_path = os.path.join(os.path.dirname(__file__), "bot_prompt.txt")
+    try:
+        with open(prompt_path, "w") as f:
+            f.write(request.prompt)
+        return {"status": "ok", "message": "Prompt updated successfully"}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": f"Failed to save prompt: {e}"})
+
+# ──────────────────────────────────────────────
 # Audio Intelligence Endpoint
 # ──────────────────────────────────────────────
 

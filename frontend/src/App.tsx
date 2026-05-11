@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Mic, Activity, Brain, Bot, 
   X, Copy, Download, Volume2, 
@@ -34,12 +34,14 @@ function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTranscript, setActiveTranscript] = useState("Hi. Thank you for calling... My name is Ali... I'm calling because I want to change my payment information before the renewal date next month.");
   
+  const [botPrompt, setBotPrompt] = useState("");
+  const [latency] = useState<number | null>(null);
+  const [isPromptSaving, setIsPromptSaving] = useState(false);
   const [features, setFeatures] = useState([
     { id: 'smart_format', name: 'Smart Format', enabled: true },
     { id: 'punctuation', name: 'Punctuation', enabled: true },
-    { id: 'diarization', name: 'Diarization', enabled: false },
-    { id: 'profanity_filter', name: 'Profanity Filter', enabled: false },
-    { id: 'summarize', name: 'Summarize', enabled: true },
+    { id: 'low_latency', name: 'Ultra Low Latency', enabled: true },
+    { id: 'interrupt', name: 'Allow Interruptions', enabled: true },
   ]);
 
   const [settings, setSettings] = useState<Settings>({
@@ -55,6 +57,42 @@ function App() {
   });
 
   const { isMicOn, transcription, toggleMic, getAudioData, isAgentConnected, toggleAgent, agentMessages } = useAudioAnalyzer(settings);
+  useEffect(() => {
+    fetchBotPrompt();
+  }, [settings.backendIp, settings.backendPort]);
+
+  const fetchBotPrompt = async () => {
+    try {
+      const apiBase = `${settings.backendIp}:${settings.backendPort}`;
+      const response = await fetch(`${window.location.protocol}//${apiBase}/v1/agent/prompt`);
+      if (response.ok) {
+        const data = await response.json();
+        setBotPrompt(data.prompt);
+      }
+    } catch (e) {
+      console.error("Failed to fetch bot prompt:", e);
+    }
+  };
+
+  const handleSavePrompt = async (newPrompt: string) => {
+    setBotPrompt(newPrompt);
+    setIsPromptSaving(true);
+    try {
+      const apiBase = `${settings.backendIp}:${settings.backendPort}`;
+      const response = await fetch(`${window.location.protocol}//${apiBase}/v1/agent/prompt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: newPrompt })
+      });
+      if (response.ok) {
+        console.log("Prompt saved to server.");
+      }
+    } catch (e) {
+      console.error("Failed to save bot prompt:", e);
+    } finally {
+      setIsPromptSaving(false);
+    }
+  };
 
   const [ttsText, setTtsText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -356,22 +394,51 @@ function App() {
               </div>
             </aside>
             <div className="panel">
-              <div className="panel-header"><span><Terminal size={14} /> REQUEST</span></div>
-              <div className="panel-content">
-                <div className="speak-container" style={{ minHeight: '250px', marginBottom: '2rem' }}>
-                   <button className={`speak-btn-large ${isMicOn ? 'active' : ''}`} onClick={toggleMic} style={{ width: '140px', height: '140px' }} title={isMicOn ? "Turn Mic Off" : "Turn Mic On"}>
-                      <Mic size={32} />
-                   </button>
-                   <div style={{ width: '100%', height: '50px' }}><Visualizer getAudioData={getAudioData} isMicOn={isMicOn} isDemoPlaying={false} /></div>
+              <div className="panel-header"><span><Terminal size={14} /> REQUEST CONFIGURATION</span></div>
+              <div className="panel-content" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div className="sidebar-section" style={{ border: 'none', padding: 0 }}>
+                  <span className="field-label" style={{ marginBottom: '0.5rem', display: 'block' }}>System Prompt (Personality)</span>
+                  <textarea 
+                    className="code-block" 
+                    style={{ background: '#000', width: '100%', height: '120px', resize: 'none', padding: '1rem', fontSize: '0.8rem', border: '1px solid #333' }}
+                    value={botPrompt}
+                    onChange={(e) => setBotPrompt(e.target.value)}
+                    onBlur={(e) => handleSavePrompt(e.target.value)}
+                  />
+                  {isPromptSaving && <span className="text-[10px] text-[#13ef95] mt-1 block">Saving prompt...</span>}
                 </div>
-                <div className="code-block" style={{ background: '#000' }}><pre>{getRequestJson()}</pre></div>
+
+                <div className="speak-container" style={{ minHeight: '150px', borderTop: '1px solid #222', paddingTop: '1.5rem' }}>
+                   <button className={`speak-btn-large ${isMicOn ? 'active' : ''}`} onClick={toggleMic} style={{ width: '100px', height: '100px' }} title={isMicOn ? "Turn Mic Off" : "Turn Mic On"}>
+                      <Mic size={24} />
+                   </button>
+                   <div style={{ width: '100%', height: '40px' }}><Visualizer getAudioData={getAudioData} isMicOn={isMicOn} isDemoPlaying={false} /></div>
+                </div>
+
+                <div className="code-block" style={{ background: '#000', marginTop: 'auto' }}><pre>{getRequestJson()}</pre></div>
               </div>
             </div>
             <div className="panel" style={{ borderRight: 'none' }}>
-              <div className="panel-header"><span><Code size={14} /> RESPONSE</span></div>
+              <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span><Code size={14} /> PIPECAT RUNTIME LOGS</span>
+                <span style={{ fontSize: '0.7rem', color: '#13ef95' }}>LATENCY: {latency || '--'}ms</span>
+              </div>
               <div className="panel-content">
-                <p style={{ fontSize: '1rem', color: transcription ? '#fff' : 'var(--text-dim)', marginBottom: '2rem' }}>{transcription || "Transcription..."}</p>
-                <div className="code-block" style={{ background: '#000' }}><pre>{JSON.stringify({ status: "200 OK", data: { transcript: transcription } }, null, 2)}</pre></div>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <span className="field-label">Real-time Transcript</span>
+                  <p style={{ fontSize: '1.1rem', color: transcription ? '#fff' : 'var(--text-dim)', marginTop: '0.5rem', fontWeight: 500 }}>{transcription || "Listening for speech..."}</p>
+                </div>
+                
+                <div className="sidebar-section" style={{ border: 'none', padding: 0 }}>
+                  <span className="field-label">Pipeline Events</span>
+                  <div className="code-block" style={{ background: '#000', height: '150px', overflowY: 'auto' }}>
+                    <pre style={{ color: '#13ef95', fontSize: '0.7rem' }}>
+                      {`[INFO] Transport: connected\n[INFO] VAD: speech_detected\n[INFO] STT: "${transcription || '...'}"\n[INFO] LLM: generating_response\n[INFO] TTS: streaming_audio`}
+                    </pre>
+                  </div>
+                </div>
+
+                <div className="code-block" style={{ background: '#000', marginTop: '1.5rem' }}><pre>{JSON.stringify({ status: "200 OK", data: { transcript: transcription, mode: "pipecat_orchestrator" } }, null, 2)}</pre></div>
               </div>
             </div>
           </div>
