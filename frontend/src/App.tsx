@@ -37,6 +37,8 @@ function App() {
   const [botPrompt, setBotPrompt] = useState("");
   const [latency] = useState<number | null>(null);
   const [isPromptSaving, setIsPromptSaving] = useState(false);
+  const [isBotStarting, setIsBotStarting] = useState(false);
+  const [botPid, setBotPid] = useState<number | null>(null);
   const [features, setFeatures] = useState([
     { id: 'smart_format', name: 'Smart Format', enabled: true },
     { id: 'punctuation', name: 'Punctuation', enabled: true },
@@ -92,6 +94,22 @@ function App() {
       console.error("Failed to save bot prompt:", e);
     } finally {
       setIsPromptSaving(false);
+    }
+  };
+  const handleStartBot = async () => {
+    setIsBotStarting(true);
+    try {
+      const apiBase = `${settings.backendIp}:${settings.backendPort}`;
+      const response = await fetch(`${window.location.protocol}//${apiBase}/v1/agent/start`, { method: "POST" });
+      if (response.ok) {
+        const data = await response.json();
+        setBotPid(data.pid);
+        console.log("Bot started with PID:", data.pid);
+      }
+    } catch (e) {
+      console.error("Failed to start bot:", e);
+    } finally {
+      setIsBotStarting(false);
     }
   };
 
@@ -404,43 +422,66 @@ function App() {
             </aside>
 
             <div className="panel" style={{ borderRight: '1px solid var(--border-subtle)' }}>
-              <div className="panel-header"><span><Terminal size={14} /> ACTIVE SESSION</span></div>
+              <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span><Terminal size={14} /> ACTIVE SESSION</span>
+                {botPid ? (
+                  <span style={{ fontSize: '0.6rem', color: '#13ef95', border: '1px solid #13ef95', padding: '2px 6px', borderRadius: '4px' }}>PID: {botPid}</span>
+                ) : (
+                  <button 
+                    className="analysis-btn" 
+                    style={{ fontSize: '0.7rem', padding: '4px 12px', background: '#13ef95', color: '#000' }}
+                    onClick={handleStartBot}
+                    disabled={isBotStarting}
+                  >
+                    {isBotStarting ? 'STARTING...' : 'START PIPECAT'}
+                  </button>
+                )}
+              </div>
               <div className="panel-content" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <div className="speak-container" style={{ minHeight: '300px', background: '#000', borderRadius: '12px', border: '1px solid #222', position: 'relative', overflow: 'hidden' }}>
-                   {features.find(f => f.id === 'video' && f.enabled) ? (
-                     <div style={{ width: '100%', height: '100%', display: 'grid', gridTemplateRows: '1fr 1fr', gap: '2px' }}>
-                        <div style={{ background: '#111', display: 'flex', alignItems: 'center', justifyCenter: 'center', position: 'relative' }}>
-                           <span style={{ position: 'absolute', top: '10px', left: '10px', fontSize: '0.6rem', color: '#707070' }}>REMOTE (BOT)</span>
-                           <Activity size={60} color="#ff33cc" className={isAgentConnected ? "animate-pulse" : ""} style={{ margin: 'auto' }} />
+                <div className="speak-container" style={{ minHeight: '350px', background: '#000', borderRadius: '16px', border: '1px solid #333', position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 0 40px rgba(0,0,0,1)' }}>
+                   {botPid ? (
+                     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ flex: 1, background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #222' }}>
+                           <div style={{ textAlign: 'center' }}>
+                              <div className="animate-pulse" style={{ width: '100px', height: '100px', background: 'linear-gradient(135deg, #ff33cc 0%, #9933ff 100%)', borderRadius: '50%', margin: '0 auto 1rem auto', boxShadow: '0 0 30px rgba(255,51,204,0.4)' }} />
+                              <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>HEYGEN AVATAR ACTIVE</span>
+                           </div>
                         </div>
-                        <div style={{ background: '#111', display: 'flex', alignItems: 'center', justifyCenter: 'center', position: 'relative' }}>
-                           <span style={{ position: 'absolute', top: '10px', left: '10px', fontSize: '0.6rem', color: '#707070' }}>LOCAL (YOU)</span>
-                           <Mic size={40} color="#13ef95" style={{ margin: 'auto' }} />
+                        <div style={{ height: '120px', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                           <span style={{ position: 'absolute', top: '10px', left: '10px', fontSize: '0.5rem', color: '#707070', textTransform: 'uppercase' }}>User Camera</span>
+                           <div style={{ width: '160px', height: '90px', background: '#000', borderRadius: '8px', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Mic size={20} color="#13ef95" />
+                           </div>
                         </div>
                      </div>
                    ) : (
-                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', padding: '2rem' }}>
+                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', padding: '3rem' }}>
                         <div 
                           onClick={toggleAgent}
-                          className={`w-[160px] h-[160px] rounded-full border-4 flex items-center justify-center text-center cursor-pointer transition-all duration-500 ${isAgentConnected ? 'border-[#ff33cc] shadow-[0_0_50px_rgba(255,51,204,0.3)]' : 'border-[#333]'}`}
+                          className={`w-[180px] h-[180px] rounded-full border-4 flex items-center justify-center text-center cursor-pointer transition-all duration-500 hover:scale-105 ${isAgentConnected ? 'border-[#ff33cc] shadow-[0_0_60px_rgba(255,51,204,0.4)]' : 'border-[#333]'}`}
                         >
-                          {isAgentConnected ? <Activity size={40} color="#ff33cc" className="animate-pulse" /> : <Mic size={40} color="#707070" />}
+                          {isAgentConnected ? <Activity size={50} color="#ff33cc" className="animate-pulse" /> : <Mic size={50} color="#707070" />}
                         </div>
-                        <div style={{ width: '100%', height: '50px' }}><Visualizer getAudioData={getAudioData} isMicOn={isMicOn || isAgentConnected} isDemoPlaying={false} /></div>
+                        <div style={{ width: '100%', height: '60px' }}><Visualizer getAudioData={getAudioData} isMicOn={isMicOn || isAgentConnected} isDemoPlaying={false} /></div>
+                        <p style={{ color: 'var(--text-dim)', fontSize: '0.8rem', textAlign: 'center', maxWidth: '250px' }}>
+                           Baseline connection via WebSockets. Click "START PIPECAT" for high-fidelity HeyGen video.
+                        </p>
                      </div>
                    )}
                 </div>
 
                 <div className="sidebar-section" style={{ border: 'none', padding: 0 }}>
-                  <span className="field-label" style={{ marginBottom: '0.5rem', display: 'block' }}>System Instructions</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span className="field-label">System Instructions</span>
+                    {isPromptSaving && <span className="text-[10px] text-[#13ef95] animate-pulse">SYNCING...</span>}
+                  </div>
                   <textarea 
                     className="code-block" 
-                    style={{ background: '#000', width: '100%', height: '200px', resize: 'none', padding: '1rem', fontSize: '0.8rem', border: '1px solid #333', fontFamily: 'monospace' }}
+                    style={{ background: '#000', width: '100%', height: '150px', resize: 'none', padding: '1rem', fontSize: '0.8rem', border: '1px solid #333', fontFamily: 'monospace', borderRadius: '12px' }}
                     value={botPrompt}
                     onChange={(e) => setBotPrompt(e.target.value)}
                     onBlur={(e) => handleSavePrompt(e.target.value)}
                   />
-                  {isPromptSaving && <span className="text-[10px] text-[#13ef95] mt-1 block">Updating Agent Persona...</span>}
                 </div>
               </div>
             </div>

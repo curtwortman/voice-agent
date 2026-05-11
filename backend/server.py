@@ -27,7 +27,12 @@ import asyncio
 import time
 import shutil
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict
+import subprocess
+import sys
+
+# Bot sub-process management
+bot_procs = {}
 
 import ffmpeg
 import numpy as np
@@ -238,6 +243,31 @@ async def update_agent_prompt(request: PromptUpdate):
         return {"status": "ok", "message": "Prompt updated successfully"}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": f"Failed to save prompt: {e}"})
+
+@app.post("/v1/agent/start")
+async def start_heygen_agent():
+    """Spawn a new HeyGen agent as a sub-process."""
+    try:
+        # Check if already running (simplified)
+        running = [p for p in bot_procs.values() if p.poll() is None]
+        if running:
+            return {"status": "already_running", "pid": running[0].pid}
+
+        # Use the absolute path to the venv python
+        python_executable = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".voice-agent-venv", "bin", "python")
+        bot_script = os.path.join(os.path.dirname(__file__), "heygen_bot.py")
+        
+        proc = subprocess.Popen(
+            [f"{python_executable} {bot_script} --transport webrtc"],
+            shell=True,
+            bufsize=1,
+            cwd=os.path.dirname(__file__)
+        )
+        bot_procs[proc.pid] = proc
+        return {"status": "ok", "pid": proc.pid, "message": "HeyGen bot started via WebRTC"}
+    except Exception as e:
+        logger.error(f"Failed to start HeyGen bot: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 # ──────────────────────────────────────────────
 # Audio Intelligence Endpoint
