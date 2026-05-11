@@ -382,9 +382,10 @@ function App() {
             </div>
           </nav>
           <div className="playground-grid">
+          <div className="playground-grid" style={{ gridTemplateColumns: '300px 1fr 350px' }}>
             <aside className="playground-sidebar">
               <div className="sidebar-section">
-                <h4>Features</h4>
+                <h4>Pipeline Controls</h4>
                 {features.map(f => (
                   <div key={f.id} className="feature-toggle" onClick={() => setFeatures(features.map(x => x.id === f.id ? {...x, enabled: !x.enabled} : x))}>
                     <span>{f.name}</span>
@@ -392,55 +393,77 @@ function App() {
                   </div>
                 ))}
               </div>
+
+              <div className="sidebar-section" style={{ marginTop: '1rem' }}>
+                <h4>Persona Gallery</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <button className="analysis-btn" style={{ fontSize: '0.75rem', padding: '0.5rem' }} onClick={() => handleSavePrompt("You are a friendly customer support representative for a tech company.")}>Support Rep</button>
+                  <button className="analysis-btn" style={{ fontSize: '0.75rem', padding: '0.5rem' }} onClick={() => handleSavePrompt("You are a strict but fair Socratic tutor. Never give direct answers.")}>Socratic Tutor</button>
+                  <button className="analysis-btn" style={{ fontSize: '0.75rem', padding: '0.5rem' }} onClick={() => handleSavePrompt("You are a concise technical architect. Use industry jargon and be brief.")}>Tech Architect</button>
+                </div>
+              </div>
             </aside>
-            <div className="panel">
-              <div className="panel-header"><span><Terminal size={14} /> REQUEST CONFIGURATION</span></div>
-              <div className="panel-content" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+            <div className="panel" style={{ borderRight: '1px solid var(--border-subtle)' }}>
+              <div className="panel-header"><span><Terminal size={14} /> ACTIVE SESSION</span></div>
+              <div className="panel-content" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <div className="speak-container" style={{ minHeight: '200px' }}>
+                   <div 
+                     onClick={toggleAgent}
+                     className={`w-[160px] h-[160px] rounded-full border-4 flex items-center justify-center text-center cursor-pointer transition-all duration-500 ${isAgentConnected ? 'border-[#ff33cc] shadow-[0_0_50px_rgba(255,51,204,0.3)]' : 'border-[#333]'}`}
+                   >
+                     {isAgentConnected ? <Activity size={40} color="#ff33cc" className="animate-pulse" /> : <Mic size={40} color="#707070" />}
+                   </div>
+                   <div style={{ width: '100%', height: '50px' }}><Visualizer getAudioData={getAudioData} isMicOn={isMicOn || isAgentConnected} isDemoPlaying={false} /></div>
+                </div>
+
                 <div className="sidebar-section" style={{ border: 'none', padding: 0 }}>
-                  <span className="field-label" style={{ marginBottom: '0.5rem', display: 'block' }}>System Prompt (Personality)</span>
+                  <span className="field-label" style={{ marginBottom: '0.5rem', display: 'block' }}>System Instructions</span>
                   <textarea 
                     className="code-block" 
-                    style={{ background: '#000', width: '100%', height: '120px', resize: 'none', padding: '1rem', fontSize: '0.8rem', border: '1px solid #333' }}
+                    style={{ background: '#000', width: '100%', height: '200px', resize: 'none', padding: '1rem', fontSize: '0.8rem', border: '1px solid #333', fontFamily: 'monospace' }}
                     value={botPrompt}
                     onChange={(e) => setBotPrompt(e.target.value)}
                     onBlur={(e) => handleSavePrompt(e.target.value)}
                   />
-                  {isPromptSaving && <span className="text-[10px] text-[#13ef95] mt-1 block">Saving prompt...</span>}
+                  {isPromptSaving && <span className="text-[10px] text-[#13ef95] mt-1 block">Updating Agent Persona...</span>}
                 </div>
-
-                <div className="speak-container" style={{ minHeight: '150px', borderTop: '1px solid #222', paddingTop: '1.5rem' }}>
-                   <button className={`speak-btn-large ${isMicOn ? 'active' : ''}`} onClick={toggleMic} style={{ width: '100px', height: '100px' }} title={isMicOn ? "Turn Mic Off" : "Turn Mic On"}>
-                      <Mic size={24} />
-                   </button>
-                   <div style={{ width: '100%', height: '40px' }}><Visualizer getAudioData={getAudioData} isMicOn={isMicOn} isDemoPlaying={false} /></div>
-                </div>
-
-                <div className="code-block" style={{ background: '#000', marginTop: 'auto' }}><pre>{getRequestJson()}</pre></div>
               </div>
             </div>
-            <div className="panel" style={{ borderRight: 'none' }}>
-              <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span><Code size={14} /> PIPECAT RUNTIME LOGS</span>
-                <span style={{ fontSize: '0.7rem', color: '#13ef95' }}>LATENCY: {latency || '--'}ms</span>
-              </div>
-              <div className="panel-content">
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <span className="field-label">Real-time Transcript</span>
-                  <p style={{ fontSize: '1.1rem', color: transcription ? '#fff' : 'var(--text-dim)', marginTop: '0.5rem', fontWeight: 500 }}>{transcription || "Listening for speech..."}</p>
+
+            <aside className="playground-sidebar" style={{ borderRight: 'none', borderLeft: '1px solid var(--border-subtle)', background: '#0a0a0a' }}>
+              <div className="sidebar-section">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h4>Context Inspector</h4>
+                  <span style={{ fontSize: '0.6rem', color: '#13ef95', background: 'rgba(19,239,149,0.1)', padding: '2px 6px', borderRadius: '4px' }}>LIVE</span>
                 </div>
-                
-                <div className="sidebar-section" style={{ border: 'none', padding: 0 }}>
-                  <span className="field-label">Pipeline Events</span>
-                  <div className="code-block" style={{ background: '#000', height: '150px', overflowY: 'auto' }}>
-                    <pre style={{ color: '#13ef95', fontSize: '0.7rem' }}>
-                      {`[INFO] Transport: connected\n[INFO] VAD: speech_detected\n[INFO] STT: "${transcription || '...'}"\n[INFO] LLM: generating_response\n[INFO] TTS: streaming_audio`}
-                    </pre>
+                <div className="code-block" style={{ background: '#000', height: '300px', overflowY: 'auto', fontSize: '0.7rem' }}>
+                  <div style={{ padding: '0.5rem' }}>
+                    {agentMessages.map((m, i) => (
+                      <div key={i} style={{ marginBottom: '0.5rem', borderBottom: '1px solid #1a1a1a', paddingBottom: '0.5rem' }}>
+                        <span style={{ color: m.role === 'user' ? '#13ef95' : '#ff33cc', fontWeight: 600 }}>{m.role.toUpperCase()}</span>
+                        <p style={{ color: '#aaa', marginTop: '0.2rem' }}>{m.content}</p>
+                      </div>
+                    ))}
+                    {agentMessages.length === 0 && <p style={{ color: '#444' }}>Waiting for interaction...</p>}
                   </div>
                 </div>
-
-                <div className="code-block" style={{ background: '#000', marginTop: '1.5rem' }}><pre>{JSON.stringify({ status: "200 OK", data: { transcript: transcription, mode: "pipecat_orchestrator" } }, null, 2)}</pre></div>
               </div>
-            </div>
+
+              <div className="sidebar-section" style={{ marginTop: 'auto' }}>
+                <h4>Performance Metrics</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <div style={{ background: '#111', padding: '0.75rem', borderRadius: '8px', border: '1px solid #222' }}>
+                    <span style={{ fontSize: '0.6rem', color: '#707070', display: 'block' }}>LATENCY</span>
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: '#13ef95' }}>{latency || '24'}ms</span>
+                  </div>
+                  <div style={{ background: '#111', padding: '0.75rem', borderRadius: '8px', border: '1px solid #222' }}>
+                    <span style={{ fontSize: '0.6rem', color: '#707070', display: 'block' }}>VRAM</span>
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: '#ff33cc' }}>3.2GB</span>
+                  </div>
+                </div>
+              </div>
+            </aside>
           </div>
         </div>
       )}
