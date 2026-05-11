@@ -14,6 +14,7 @@ INPUT_WAV = "tests/input.wav"
 TRANSCRIPTION_FILE = "tests/transcription.txt"
 FRONTEND_PORT = os.getenv("API_PORT", "8008")
 FRONTEND_URL = f"http://localhost:{FRONTEND_PORT}"
+VAULT_DIR = "obsidian_vault"
 
 def setup_audio():
     """Generates MP3 and converts to WAV for browser injection."""
@@ -38,6 +39,14 @@ def teardown_audio():
 @pytest.fixture(scope="module", autouse=True)
 def audio_fixture():
     setup_audio()
+    # Clear vault before tests
+    if os.path.exists(VAULT_DIR):
+        for f in os.listdir(VAULT_DIR):
+            if f.endswith(".md"):
+                os.remove(os.path.join(VAULT_DIR, f))
+    else:
+        os.makedirs(VAULT_DIR, exist_ok=True)
+        
     yield
     teardown_audio()
 
@@ -142,6 +151,13 @@ def test_e2e_transcription():
 
         # Assert
         assert ratio > 50, f"Transcription failed. Expected '{TEST_TEXT}', got '{transcribed_text}' (Ratio: {ratio})"
+        
+        # Verify Obsidian File Generation (Use Case 2)
+        print("Verifying Obsidian note generation...")
+        time.sleep(5) # Give backend time to process LLM and save file
+        files = [f for f in os.listdir(VAULT_DIR) if f.endswith(".md")]
+        assert len(files) > 0, "No Obsidian note was generated for the transcription session."
+        print(f"Found Obsidian note: {files[0]}")
 
 def test_e2e_ui_interactions():
     """
@@ -294,6 +310,15 @@ def test_e2e_voice_agent():
             # We can grab the parent div's inner text.
             response_text = agent_message_label.locator('..').inner_text()
             print(f"Agent Response: {response_text.replace('AGENT', '').strip()}")
+            
+            # Verify Obsidian File Generation (Use Case 1)
+            # We need to disconnect first to trigger the obsidian save
+            print("Disconnecting Agent to trigger Obsidian save...")
+            orb_locator.click()
+            time.sleep(5)
+            files = [f for f in os.listdir(VAULT_DIR) if f.endswith(".md")]
+            assert len(files) > 1, "No Obsidian note was generated for the agent session (expected 2 files total now)."
+            print("Agent session saved to Obsidian.")
             
         except Exception as e:
             print(f"Timed out waiting for AGENT response. Backend/LLM might be slow or offline.")

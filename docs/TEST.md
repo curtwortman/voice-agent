@@ -88,6 +88,7 @@ The main script `tests/integration/test_e2e_pipeline.py` contains five test case
 6.  Waits for the transcription text to appear in the DOM.
 7.  Captures the text and calculates a fuzzy match ratio with the original synthetic text.
 8.  Asserts that the match ratio is > 50%.
+9.  Verifies that an Obsidian-compliant Markdown note was automatically generated in `./obsidian_vault`.
 
 **`test_e2e_ui_interactions`**
 1.  Navigates through all four primary tabs (STT, TTS, Voice Agent, Audio Intelligence).
@@ -99,6 +100,7 @@ The main script `tests/integration/test_e2e_pipeline.py` contains five test case
 1.  Navigates to the Voice Agent tab and clicks the orb to activate the Pipecat agent.
 2.  Verifies the agent state transitions to "Agent Listening...".
 3.  Waits up to 45 seconds for an AGENT response message to appear in the chat UI.
+4.  Clicks the orb to disconnect and verifies that a summary note was saved to the Obsidian vault.
 
 **`test_e2e_tts_narration`**
 1.  Navigates to the Text to Speech tab.
